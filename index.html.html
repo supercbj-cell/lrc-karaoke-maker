@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>KRC/LRC 逐字歌詞時間軸校正器 Pro Ultimate+</title>
+    <style>
+        body { font-family: "PingFang TC", "Microsoft JhengHei", Arial, sans-serif; margin: 20px; background: #f4f4f9; color: #333; }
+        .container { display: flex; gap: 20px; max-width: 1400px; margin: 0 auto; }
+        .panel { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .workspace-panel { flex: 1.6; }
+        textarea { width: 100%; height: 150px; margin-bottom: 10px; font-size: 16px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: monospace; }
+        audio { width: 100%; margin: 10px 0; }
+        
+        .timer-display { font-family: "Courier New", Courier, monospace; font-size: 32px; font-weight: bold; color: #007bff; background: #222; padding: 10px; border-radius: 6px; text-align: center; margin: 10px 0; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); letter-spacing: 1px; }
+        
+        .btn { background: #007bff; color: white; border: none; padding: 10px 18px; border-radius: 4px; cursor: pointer; font-size: 15px; margin-right: 5px; font-weight: bold; }
+        .btn:hover { background: #0056b3; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #bd2130; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        .btn-success, .btn-danger, .btn { font-weight: bold; }
+        .btn-secondary { background: #6c757d; color: white; border: none; padding: 10px 18px; border-radius: 4px; cursor: pointer; font-size: 15px; font-weight: bold; }
+        .btn-secondary:hover { background: #5a6268; }
+        
+        .control-group { margin: 15px 0; padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef; }
+        .group-title { font-weight: bold; font-size: 14px; color: #495057; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
+        
+        .btn-speed { background: #e2e6ea; color: #333; border: 1px solid #dae0e5; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-speed.active { background: #6c757d; color: white; border-color: #6c757d; font-weight: bold; }
+        
+        .offset-ctrl { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+        .input-offset { width: 80px; padding: 4px; text-align: center; font-weight: bold; font-size: 14px; }
+        .btn-offset { background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .btn-offset:hover { background: #5a6268; }
+        
+        #workspace { position: relative; max-height: 380px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: #fafafa; scroll-behavior: smooth; }
+        .lyric-line { padding: 12px; margin: 8px 0; border-radius: 4px; background: white; border-left: 4px solid #ccc; transition: all 0.2s; position: relative; }
+        .lyric-line.active { background: #e8f4fd; border-left-color: #007bff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        
+        .lyric-line.selected-line { border-left-color: #007bff !important; background: #f0f7ff !important; box-shadow: 0 0 8px rgba(0,123,255,0.25); }
+        .lyric-line.playback-active { border-left-color: #6f42c1 !important; background: #f3ebff !important; box-shadow: 0 2px 6px rgba(111,66,193,0.15); }
+        
+        .line-header { font-size: 13px; color: #495057; font-family: monospace; margin-bottom: 6px; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px; font-weight: bold; }
+        .line-header:hover { color: #007bff; text-decoration: underline; }
+        
+        .star-btn { cursor: pointer; font-size: 18px; color: #adb5bd; transition: color 0.1s ease, transform 0.1s ease; user-select: none; display: inline-block; line-height: 1; }
+        .star-btn:hover { transform: scale(1.25); color: #ffc107; }
+        .star-btn.active { color: #ffb300 !important; text-shadow: 0 0 2px rgba(255,179,0,0.4); }
+        
+        .word-box { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 19px; color: #444; border: 1px solid #e0e0e0; cursor: pointer; user-select: none; transition: all 0.1s; margin-right: 3px; background: #fff; box-sizing: border-box; white-space: pre-wrap; vertical-align: middle; }
+        .word-box:hover { border-color: #007bff; background: #e8f4fd; transform: scale(1.03); }
+        .word-box.tagged { color: #28a745; font-weight: bold; background: #eafaf1; border-color: #28a745; }
+        .word-box.current { background: #ffc107; color: black; font-weight: bold; animation: pulse 1s infinite; border-color: #ff9800; box-shadow: 0 0 5px rgba(255,152,0,0.5); }
+        
+        .word-box.space-node { 
+            display: inline-block !important; width: 10px !important; border: none !important; background: transparent !important; 
+            padding: 0 !important; margin: 0 2px !important; pointer-events: none !important; box-shadow: none !important;
+            outline: none !important; color: transparent !important;
+        }
+
+        .word-box.selected-word { outline: 3px solid #007bff !important; box-shadow: 0 0 6px rgba(0,123,255,0.6); position: relative; z-index: 5; }
+        .word-box.qa-error { background: #fff5f5 !important; border: 2px solid #e53e3e !important; color: #e53e3e !important; box-shadow: 0 0 8px rgba(229,62,62,0.4) !important; font-weight: bold; }
+
+        .inline-edit-input {
+            border: 1px solid #007bff; border-radius: 4px; padding: 2px 6px; font-size: 19px; font-family: inherit;
+            text-align: center; background: #ffffff; color: #000000; box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            outline: none; box-sizing: border-box; vertical-align: middle; margin: -2px 2px;
+        }
+        
+        .word-box.rest-node { color: #ff5722; background: #fff3e0; border-color: #ff5722; font-family: monospace; font-size: 17px; }
+        .word-box.rest-node.tagged { color: #e65100; background: #ffe0b2; border-color: #e65100; }
+        
+        #playback-cursor { color: #ff0000; font-weight: bold; font-size: 22px; margin: 0 -2px; animation: cursor-blink 0.4s infinite alternate; z-index: 10; display: inline-block; vertical-align: middle; }
+        .waiting-end-badge { color: #28a745; font-weight: bold; margin-left: 10px; font-size: 14px; animation: blink 1s infinite; }
+        .hint-box { background: #e2f0d9; color: #385723; padding: 12px; border-radius: 4px; margin-bottom: 15px; font-size: 14px; line-height: 1.5; border-left: 5px solid #70ad47; display: flex; justify-content: space-between; align-items: center; }
+        
+        .ktv-preview-box {
+            width: 100%; height: 160px; background: #000000; border-radius: 8px; border: 2px solid #2d3748;
+            margin-bottom: 15px; display: flex; flex-direction: column; justify-content: center; padding: 10px 30px;
+            box-sizing: border-box; font-weight: bold; position: relative; font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.9); overflow: hidden;
+        }
+        .ktv-preview-line {
+            height: 48px; line-height: 48px; font-size: 26px; white-space: nowrap; overflow: hidden;
+            position: relative; color: #ffffff; 
+            text-shadow: 2px 2px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000;
+            letter-spacing: 2px; transition: opacity 0.25s ease; opacity: 0.6;
+        }
+        .ktv-top-line { text-align: left; padding-right: 40px; }
+        .ktv-bottom-line { text-align: right; padding-left: 40px; margin-top: 6px; }
+        
+        .ktv-word-node { position: relative; display: inline-block; vertical-align: middle; color: #ffffff; white-space: pre; }
+        .ktv-word-fill {
+            position: absolute; top: 0; left: 0; height: 100%; overflow: hidden;
+            color: #00f0ff; 
+            text-shadow: 2px 2px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000;
+            width: 0%; white-space: pre; pointer-events: none; will-change: width;
+        }
+
+        .custom-context-menu { display: none; position: absolute; z-index: 9999; background: #ffffff; border: 1px solid #ced4da; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 4px 0; min-width: 160px; }
+        .context-menu-item { padding: 10px 14px; cursor: pointer; font-size: 14px; font-weight: bold; color: #333333; display: flex; align-items: center; transition: background 0.1s; }
+        .context-menu-item:hover { background: #007bff; color: #ffffff; }
+        #timelineTrack { width: 100%; height: 12px; background: #dee2e6; border-radius: 6px; position: relative; margin: 12px 0; cursor: pointer; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); }
+        #timelineFill { height: 100%; background: #007bff; border-radius: 6px; width: 0%; transition: width 0.1s linear; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+        .modal-content { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 680px; max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+        .help-table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
+        .help-table th, .help-table td { padding: 10px; border: 1px solid #dee2e6; }
+        .help-table th { background: #f8f9fa; font-weight: bold; color: #495057; }
+        .hotkey-badge { background: #e9ecef; border: 1px solid #ced4da; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold; color: #212529; }
+    </style>
+</head>
+<body>
+
+<h2>🎵 逐字級 LRC 歌詞時間軸校正器 Pro Ultimate+ (退回鍵智慧無損修正版)</h2>
+
+<div class="hint-box">
+    <div>
+        <b>🎤 退回功能強固更新：</b> 現在按退回鍵（Backspace）只會清除您在本次錄製中「按過空白鍵或R」標記的時間點。若字詞帶有原本匯入的正確時間，則只會單純退回游標與音樂，絕對不會刪除原本的時間！
+    </div>
+    <button class="btn btn-secondary" onclick="document.getElementById('helpModal').style.display='flex'" style="padding: 6px 12px; font-size: 13px;">⌨️ 打點快捷鍵說明書</button>
+</div>
+
+<div class="container">
+    <div class="panel">
+        <h3>1. 載入資源與控制</h3>
+        <label style="font-weight: bold;">步驟一：選擇 MP3 音檔</label>
+        <input type="file" id="audioInput" accept="audio/mp3" style="margin-bottom: 12px;" onclick="this.value=''"><br>
+        
+        <label style="font-weight: bold;">步驟二：匯入歌詞軸檔 (支援 LRC、TXT 或 🌟OpenLRC JSON 檔)</label>
+        <input type="file" id="lrcInput" accept=".lrc,.txt,.json" style="margin-bottom: 12px;" onclick="this.value=''"><br>
+        
+        <label style="font-weight: bold;">步驟三：編輯或確認歌詞內容</label>
+        <textarea id="lyricsInput" placeholder="請在此貼上歌詞...">[00:00.20]歌曲:忘川河畔我望不穿(原唱)
+[00:05.00]歌手:趙洋</textarea>
+        
+        <div style="margin-bottom: 10px; display: flex; gap: 4px; flex-wrap: wrap;">
+            <button class="btn" id="startBtn">▶ 開始錄製 / 播放音訊</button>
+            <button class="btn" style="background:#28a745; font-weight: bold;" id="playbackCheckBtn">▶ 播放檢查</button>
+            <button class="btn" style="background:#e53e3e; font-weight: bold;" onclick="runQAProblemCheck()">🔍 智慧時序 QA 檢查</button>
+            <button class="btn btn-danger" id="exportBtn" disabled>💾 匯出逐字 LRC 檔</button>
+        </div>
+        
+        <div class="timer-display" id="precisionTime">[00:00.00]</div>
+        <audio id="audioPlayer" controls></audio>
+        
+        <div id="timelineTrack" title="點擊軌道可直接跳轉音樂播放進度">
+            <div id="timelineFill"></div>
+        </div>
+        
+        <div class="control-group">
+            <div class="group-title">⏱️ 全域時間補償 (Audio Offset)</div>
+            <div class="offset-ctrl">
+                <button class="btn-offset" onclick="adjustOffset(-0.1)">-0.1s</button>
+                <button class="btn-offset" onclick="adjustOffset(-0.02)">-0.02s</button>
+                <input type="number" id="audioOffsetInput" class="input-offset" step="0.01" value="0.00" onchange="updateOffsetFromInput(this.value)"> 秒
+                <button class="btn-offset" onclick="adjustOffset(0.02)">+0.02s</button>
+                <button class="btn-offset" onclick="adjustOffset(0.1)">+0.1s</button>
+                <button class="btn-offset" style="background:#dc3545;" onclick="resetOffset()">歸零</button>
+            </div>
+            <button class="btn" style="background:#6f42c1; font-size:12px; padding:5px 10px; width:100%; margin-top:4px;" onclick="bakeOffsetToTimeline()">⚡ 永久應用此補償至目前時間軸</button>
+        </div>
+
+        <div class="speed-group" style="margin-top:10px;">
+            <span style="font-weight: bold; font-size:14px;">播放速度：</span>
+            <button class="btn-speed" onclick="setSpeed(0.5, this)">0.5x</button>
+            <button class="btn-speed" onclick="setSpeed(0.75, this)">0.75x</button>
+            <button class="btn-speed active" id="speed-1" onclick="setSpeed(1.0, this)">1.0x (正常)</button>
+            <button class="btn-speed" onclick="setSpeed(1.25, this)">1.25x</button>
+            <button class="btn-speed" onclick="setSpeed(1.5, this)">1.5x</button>
+        </div>
+    </div>
+
+    <div class="panel workspace-panel">
+        <h3>2. 逐字校正與可視化監聽區</h3>
+        
+        <div class="ktv-preview-box" id="ktvPreviewBox">
+            <div id="ktv-line-1" class="ktv-preview-line ktv-top-line"></div>
+            <div id="ktv-line-2" class="ktv-preview-line ktv-bottom-line"></div>
+        </div>
+        
+        <div id="workspace">等待匯入音樂與歌詞...</div>
+    </div>
+</div>
+
+<div id="helpModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 style="margin-top: 0; color: #007bff; display: flex; align-items: center; gap: 6px;">⌨️ KRC/LRC 精簡極速盲操快捷鍵說明書</h3>
+        <table class="help-table">
+            <thead>
+                <tr>
+                    <th style="width: 140px;">核心情境</th>
+                    <th style="width: 160px;">觸發按鍵</th>
+                    <th>功能效果說明</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background: #fdfaf0;">
+                    <td><b style="color: #b95700;">🎤 男女對唱合唱</b></td>
+                    <td>
+                        <span class="hotkey-badge" style="border-color:#007bff; color:#007bff;">1 鍵</span> / 
+                        <span class="hotkey-badge" style="border-color:#dc3545; color:#dc3545;">2 鍵</span> / 
+                        <span class="hotkey-badge" style="border-color:#28a745; color:#28a745;">3 鍵</span>
+                    </td>
+                    <td>給予當前播放句套用：<b style="color:#007bff;">{M}男聲(藍)</b> / <b style="color:#dc3545;">{W}女聲(紅)</b> / <b style="color:#28a745;">{C}合唱(綠)</b>（再按一次清除）</td>
+                </tr>
+                <tr style="background: #f0f7ff;">
+                    <td><b style="color: #0056b3;">⏩ 音訊盲操快進退</b></td>
+                    <td>
+                        <span class="hotkey-badge" style="border-color:#0056b3; color:#0056b3;">Q 鍵</span> / 
+                        <span class="hotkey-badge" style="border-color:#0056b3; color:#0056b3;">E 鍵</span>
+                    </td>
+                    <td>音樂立刻 ⏪ 快退 2 秒 / ⏩ 快進 2 秒 (打點過手救星)</td>
+                </tr>
+                <tr>
+                    <td><b>時序復原重做</b></td>
+                    <td><span class="hotkey-badge">Ctrl + Z</span> / <span class="hotkey-badge">Ctrl + Y</span></td>
+                    <td><b>全域歷史紀錄堆疊</b>：復原上一步操作 / 重做下一步操作</td>
+                </tr>
+                <tr>
+                    <td><b>音訊即時控制</b></td>
+                    <td><span class="hotkey-badge">A 鍵</span></td>
+                    <td>控制音樂 <b>▶ 播放 / ⏸ 暫停</b></td>
+                </tr>
+                <tr>
+                    <td><b>即時蓋印錄製</b></td>
+                    <td><span class="hotkey-badge">空白鍵 Space</span></td>
+                    <td><b>字元時間戳記敲擊</b> / 行尾敲擊鎖定結束時間並推進下一句</td>
+                </tr>
+                <tr>
+                    <td><b>置入休止符</b></td>
+                    <td><span class="hotkey-badge">0 鍵</span> / <span class="hotkey-badge">R 鍵</span></td>
+                    <td>原地切出或追加休止符 <span style="color:#ff5722;">(R)</span> (內建去重防重複熔斷)</td>
+                </tr>
+                <tr>
+                    <td><b>時序復原撤回</b></td>
+                    <td><span class="hotkey-badge">Backspace 鍵</span></td>
+                    <td><b>撤回上一個字的打點時間</b>，音訊會智慧微幅快退追蹤（未更動的字無損保護）</td>
+                </tr>
+                <tr>
+                    <td><b>就地編輯功能</b></td>
+                    <td><span class="hotkey-badge">Enter 鍵</span> / <span class="hotkey-badge">Delete 鍵</span></td>
+                    <td>Inline 原地插入空行 / 快速刪除單字塊與整行歌詞</td>
+                </tr>
+            </tbody>
+        </table>
+        <button class="btn btn-secondary" onclick="document.getElementById('helpModal').style.display='none'" style="align-self: flex-end; padding: 8px 20px;">關閉說明書</button>
+    </div>
+</div>
+
+<div id="customContextMenu" class="custom-context-menu">
+    <div class="context-menu-item" onclick="handleMenuAction('left')">⬅️ 在左側加字</div>
+    <div class="context-menu-item" onclick="handleMenuAction('right')">➡️ 在右側加字</div>
+    <div class="context-menu-item" style="border-top: 1px solid #eee;" onclick="handleMenuAction('split')">✂️ 在此字處換行</div>
+    <div class="context-menu-item" onclick="handleMenuAction('deleteSingleWord')">🗑️ 刪除這個字</div>
+    <div class="context-menu-item" style="border-top: 1px solid #eee;" onclick="handleMenuAction('emptyLine')">➕ 在下方插入新空行</div>
+</div>
+
+<script>
+    let lyricsData = []; 
+    let currentLineIndex = 0;
+    let currentCharIndex = 0;
+    let disableAutoScrollUntil = 0; 
+    let clickTimer = null; 
+    let audioOffset = 0.0; 
+    
+    let selectedTarget = { lIdx: 0, wIdx: -1 };
+    let rightClickTarget = { lIdx: null, wIdx: null }; 
+
+    let ktvRenderedLine1 = -1;
+    let ktvRenderedLine2 = -1;
+
+    let undoStack = [];
+    let redoStack = [];
+    const MAX_HISTORY_SIZE = 50; 
+
+    function syncAllLineTimes() {
+        lyricsData.forEach((line) => {
+            if (!line.isWholeLine && line.words && line.words.length > 0) {
+                let firstTimedWord = line.words.find(w => w.time !== null);
+                if (firstTimedWord) {
+                    line.time = firstTimedWord.time;
+                } else {
+                    line.time = null; 
+                }
+            }
+        });
+    }
+
+    function saveHistoryState() {
+        const snapshot = {
+            lyricsData: JSON.parse(JSON.stringify(lyricsData)),
+            currentLineIndex: currentLineIndex,
+            currentCharIndex: currentCharIndex,
+            selectedTarget: JSON.parse(JSON.stringify(selectedTarget))
+        };
+        undoStack.push(snapshot);
+        if (undoStack.length > MAX_HISTORY_SIZE) { undoStack.shift(); }
+        redoStack = []; 
+    }
+
+    function executeUndo() {
+        if (undoStack.length === 0) return;
+        const currentSnapshot = { lyricsData: JSON.parse(JSON.stringify(lyricsData)), currentLineIndex: currentLineIndex, currentCharIndex: currentCharIndex, selectedTarget: JSON.parse(JSON.stringify(selectedTarget)) };
+        redoStack.push(currentSnapshot);
+        const previousState = undoStack.pop();
+        lyricsData = previousState.lyricsData; currentLineIndex = previousState.currentLineIndex; currentCharIndex = previousState.currentCharIndex; selectedTarget = previousState.selectedTarget;
+        renderWorkspace();
+    }
+
+    function executeRedo() {
+        if (redoStack.length === 0) return;
+        const currentSnapshot = { lyricsData: JSON.parse(JSON.stringify(lyricsData)), currentLineIndex: currentLineIndex, currentCharIndex: currentCharIndex, selectedTarget: JSON.parse(JSON.stringify(selectedTarget)) };
+        undoStack.push(currentSnapshot);
+        const nextState = redoStack.pop();
+        lyricsData = nextState.lyricsData; currentLineIndex = nextState.currentLineIndex; currentCharIndex = nextState.currentCharIndex; selectedTarget = nextState.selectedTarget;
+        renderWorkspace();
+    }
+
+    const audioInput = document.getElementById('audioInput');
+    const lrcInput = document.getElementById('lrcInput');
+    const lyricsInput = document.getElementById('lyricsInput');
+    const startBtn = document.getElementById('startBtn');
+    const playbackCheckBtn = document.getElementById('playbackCheckBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const workspace = document.getElementById('workspace');
+    const customMenu = document.getElementById('customContextMenu');
+
+    audioInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) audioPlayer.src = URL.createObjectURL(file);
+    });
+
+    window.setSpeed = function(speed, btnElement) {
+        audioPlayer.playbackRate = speed;
+        document.querySelectorAll('.btn-speed').forEach(btn => btn.classList.remove('active'));
+        if (btnElement) btnElement.classList.add('active');
+    };
+
+    window.adjustOffset = function(val) {
+        audioOffset = parseFloat((audioOffset + val).toFixed(2));
+        document.getElementById('audioOffsetInput').value = audioOffset.toFixed(2);
+        renderWorkspace();
+    };
+
+    window.updateOffsetFromInput = function(val) {
+        audioOffset = parseFloat(parseFloat(val).toFixed(2)) || 0.0;
+        renderWorkspace();
+    };
+
+    window.resetOffset = function() {
+        document.getElementById('audioOffsetInput').value = "0.00"; audioOffset = 0.0; renderWorkspace();
+    };
+
+    window.bakeOffsetToTimeline = function() {
+        if (audioOffset === 0) { alert("目前補償值為 0，無需應用。"); return; }
+        if (lyricsData.length === 0) { alert("工作區目前沒有歌詞數據。"); return; }
+        if (confirm(`確定要將目前的 ${audioOffset > 0 ? '+' : ''}${audioOffset} 秒補償「永久寫入」嗎？`)) {
+            saveHistoryState();
+            lyricsData.forEach(line => {
+                if (line.time !== null) line.time = parseFloat((line.time + audioOffset).toFixed(2));
+                if (line.endTime !== null) line.endTime = parseFloat((line.endTime + audioOffset).toFixed(2));
+                line.words.forEach(word => { if (word.time !== null) word.time = parseFloat((word.time + audioOffset).toFixed(2)); });
+            });
+            audioOffset = 0.0; document.getElementById('audioOffsetInput').value = "0.00"; renderWorkspace();
+            alert("🎉 已成功將全域補償永久烘焙寫入時間軸！");
+        }
+    };
+
+    document.addEventListener('click', () => { customMenu.style.display = 'none'; });
+
+    audioPlayer.addEventListener('play', () => {
+        startBtn.innerText = "⏸ 暫停錄製";
+        playbackCheckBtn.innerText = "⏸ 暫停檢查";
+        playbackCheckBtn.style.background = "#dc3545"; 
+    });
+
+    audioPlayer.addEventListener('pause', () => {
+        startBtn.innerText = "▶ 開始錄製 / 播放音訊";
+        playbackCheckBtn.innerText = "▶ 播放檢查";
+        playbackCheckBtn.style.background = "#28a745"; 
+    });
+
+    function tokenizeLine(line) {
+        const regex = /\(R\)|[a-zA-Z0-9'-]+[ \t\u3000]*|[ \t\u3000]+|[^ \t\u3000]/gi;
+        return (line.match(regex) || []).map(token => {
+            const isRest = token.toUpperCase() === "(R)";
+            const isSpace = /^[ \t\u3000]+$/.test(token);
+            return { char: token, rawPitch: "", time: null, isSpace: isSpace, isRest: isRest, isPitchOnly: false, isEmptyTag: false };
+        });
+    }
+
+    function formatTime(seconds) {
+        if (seconds === null || seconds === undefined || isNaN(seconds)) return "00:00.00";
+        let fixedSecs = parseFloat(seconds.toFixed(2));
+        const m = Math.floor(fixedSecs / 60).toString().padStart(2, '0');
+        const s = Math.floor(fixedSecs % 60).toString().padStart(2, '0');
+        const ms = Math.round((fixedSecs % 1) * 100).toString().padStart(2, '0');
+        return `${m}:${s}.${ms}`;
+    }
+
+    function parseTimeToSeconds(str) {
+        if (!str || !str.trim()) return null; str = str.trim();
+        if (str.includes(':')) { const parts = str.split(':'); return (parseInt(parts[0]) || 0) * 60 + (parseFloat(parts[1]) || 0); }
+        return parseFloat(str) || 0;
+    }
+
+    function getDynamicLineEndTime(lineObj, index) {
+        if (lineObj.time === null) return null;
+        if (!lineObj.isWholeLine && lineObj.words && lineObj.words.length > 0) {
+            let lastWord = lineObj.words[lineObj.words.length - 1];
+            if ((lastWord.isRest || lastWord.char === "(R)") && lastWord.time !== null) return lastWord.time;
+        }
+        if (lineObj.endTime !== null) return lineObj.endTime;
+        for (let k = index + 1; k < lyricsData.length; k++) {
+            if (lyricsData[k].time !== null) return lyricsData[k].time;
+        }
+        return null;
+    }
+
+    lrcInput.addEventListener('change', (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        const isJson = file.name.toLowerCase().endsWith('.json'); const reader = new FileReader();
+        reader.onload = function(evt) { if (isJson) { parseAndLoadOpenLRCJson(evt.target.result); } else { parseAndLoadLRC(evt.target.result); } };
+        reader.readAsText(file, 'utf-8');
+    });
+
+    function parseAndLoadOpenLRCJson(jsonText) {
+        try {
+            const rawData = JSON.parse(jsonText); if (!Array.isArray(rawData)) { throw new Error("資料格式非標準 OpenLRC JSON 陣列"); }
+            saveHistoryState(); lyricsData = []; let rawTextLines = [];
+            lyricsData.push({ time: 0.20, endTime: null, isWholeLine: true, isWaitingForEnd: false, isStarred: false, words: tokenizeLine("歌曲:由 OpenLRC 智慧載入"), rawText: "歌曲:由 OpenLRC 智慧載入", singerTag: null });
+            lyricsData.push({ time: 5.00, endTime: null, isWholeLine: true, isWaitingForEnd: false, isStarred: false, words: tokenizeLine("歌手:AI 語音自動對齊"), rawText: "歌手:AI 語音自動對齊", singerTag: null });
+            rawData.forEach(item => {
+                let lineStart = item.start !== undefined ? parseFloat(item.start) : null;
+                let lineEnd = item.end !== undefined ? parseFloat(item.end) : null; let lineText = item.text || ""; rawTextLines.push(lineText);
+                let processedWords = [];
+                if (Array.isArray(item.words)) {
+                    item.words.forEach(w => {
+                        let wText = w.word || ""; let wStart = w.start !== undefined ? parseFloat(w.start) : null;
+                        tokenizeLine(wText).forEach(sub => { sub.time = wStart; processedWords.push(sub); });
+                    });
+                } else { tokenizeLine(lineText).forEach((t, idx) => { if (idx === 0) t.time = lineStart; processedWords.push(t); }); }
+                lyricsData.push({ time: lineStart, endTime: lineEnd, isWholeLine: false, isWaitingForEnd: false, isStarred: false, words: processedWords, rawText: lineText, singerTag: null });
+            });
+            lyricsInput.value = rawTextLines.join('\n'); currentLineIndex = 2; currentCharIndex = 0; selectedTarget = { lIdx: currentLineIndex, wIdx: -1 };
+            renderWorkspace(); exportBtn.disabled = false; alert(`🎉 [OpenLRC 完美對接]：已成功導入 JSON 軸檔！`);
+        } catch (err) { alert("解析 OpenLRC JSON 失敗: " + err.message); }
+    }
+
+    function parseAndLoadLRC(text) {
+        try {
+            const lines = text.split(/\r?\n/); lyricsData = []; let rawTextLines = []; let hasTimestamps = false;
+            for (let i = 0; i < lines.length; i++) { if (/\[\d+:\d+(?:\.\d+)?\]/.test(lines[i])) { hasTimestamps = true; break; } }
+            
+            if (hasTimestamps) {
+                saveHistoryState();
+                lines.forEach(line => {
+                    line = line.trim(); if (!line) return; 
+                    if (line.charCodeAt(0) === 0xFEFF) { line = line.substring(1); } 
+                    
+                    const lineTimeMatch = line.match(/^\[(\d+):(\d+(?:\.\d+)?)\](.*)$/);
+                    if (lineTimeMatch) {
+                        const min = parseInt(lineTimeMatch[1]); const sec = parseFloat(lineTimeMatch[2]); const lineTime = min * 60 + sec; let content = lineTimeMatch[3].trim();
+                        
+                        let singerTag = null;
+                        const singerMatch = content.match(/^\{(M|W|C)\}/i);
+                        if (singerMatch) { singerTag = singerMatch[1].toUpperCase(); content = content.replace(/^\{(M|W|C)\}/i, "").trim(); }
+
+                        if (/<(\d+):(\d+(?:\.\d+)?)>/.test(content)) {
+                            const tokens = []; const matches = [...content.matchAll(/<(\d+):(\d+(?:\.\d+)?)>/g)];
+                            let lineExplicitEndTime = null;
+
+                            for (let i = 0; i < matches.length; i++) {
+                                const currMatch = matches[i]; const currTime = parseInt(matches[i][1]) * 60 + parseFloat(matches[i][2]);
+                                const startIdx = currMatch.index + currMatch[0].length; const endIdx = (i + 1 < matches.length) ? matches[i+1].index : content.length;
+                                const tokenText = content.substring(startIdx, endIdx);
+
+                                if (i === matches.length - 1 && tokenText.trim() === "") {
+                                    lineExplicitEndTime = parseFloat(currTime.toFixed(2));
+                                } else {
+                                    tokens.push({ time: currTime, text: tokenText });
+                                }
+                            }
+                            const words = [];
+                            tokens.forEach(t => {
+                                let txt = t.text; let pitchMatches = txt.match(/\([A-G]#?\d\)/gi) || []; let cleanText = txt.replace(/\([A-G]#?\d\)/gi, "");
+                                let isRest = (cleanText.trim() === "(R)" || txt.includes("(R)")); if (isRest) { cleanText = "(R)"; }
+                                if (cleanText === "" && pitchMatches.length === 0) return;
+                                
+                                words.push({ char: cleanText, rawPitch: pitchMatches.join(''), time: t.time, isSpace: /^[ \t\u3000]+$/.test(cleanText), isRest: isRest, isPitchOnly: (cleanText === "" && pitchMatches.length > 0), isEmptyTag: false });
+                            });
+                            const cleanRawText = content.replace(/<[^>]+>/g, '').replace(/\([A-G]#?\d\)/gi, '').trim(); rawTextLines.push(cleanRawText);
+                            lyricsData.push({ time: lineTime, endTime: lineExplicitEndTime, isWholeLine: false, isWaitingForEnd: false, isStarred: false, words: words, rawText: cleanRawText, singerTag: singerTag });
+                        } else {
+                            const cleanRawText = content.trim(); rawTextLines.push(cleanRawText);
+                            lyricsData.push({ time: lineTime, endTime: null, isWholeLine: true, isWaitingForEnd: false, isStarred: false, words: tokenizeLine(cleanRawText), rawText: cleanRawText, singerTag: singerTag });
+                        }
+                    }
+                });
+                if (lyricsData.length > 0) {
+                    lyricsInput.value = rawTextLines.join('\n'); currentLineIndex = lyricsData.length > 2 ? 2 : 0; currentCharIndex = 0; selectedTarget = { lIdx: currentLineIndex, wIdx: -1 };
+                    renderWorkspace(); exportBtn.disabled = false; alert(`成功將外部 LRC 檔案載入！`);
+                    return; 
+                } else { hasTimestamps = false; }
+            }
+
+            if (!hasTimestamps) {
+                const cleanLines = lines.map(l => l.trim()).filter(l => l);
+                if (cleanLines.length > 0) {
+                    saveHistoryState(); if (!cleanLines[0].includes('歌曲:') && !cleanLines[0].includes('歌名:')) { cleanLines.unshift('[00:05.00]歌手:請編輯'); cleanLines.unshift('[00:00.20]歌曲:請編輯'); }
+                    lyricsInput.value = cleanLines.map(l => l.replace(/^\[\d+:\d+(?:\.\d+)?\]/, '')).join('\n');
+                    lyricsData = cleanLines.map(line => {
+                        const lineTimeMatch = line.match(/^\[(\d+):(\d+(?:\.\d+)?)\](.*)$/);
+                        if(lineTimeMatch){ 
+                            let content = lineTimeMatch[3].trim(); let singerTag = null;
+                            const singerMatch = content.match(/^\{(M|W|C)\}/i);
+                            if (singerMatch) { singerTag = singerMatch[1].toUpperCase(); content = content.replace(/^\{(M|W|C)\}/i, "").trim(); }
+                            return { time: parseInt(lineTimeMatch[1]) * 60 + parseFloat(lineTimeMatch[2]), endTime: null, isWholeLine: true, isWaitingForEnd: false, isStarred: false, words: tokenizeLine(content), rawText: content, singerTag: singerTag }; 
+                        }
+                        let content = line; let singerTag = null;
+                        const singerMatch = content.match(/^\{(M|W|C)\}/i);
+                        if (singerMatch) { singerTag = singerMatch[1].toUpperCase(); content = content.replace(/^\{(M|W|C)\}/i, "").trim(); }
+                        return { time: null, endTime: null, isWholeLine: false, isWaitingForEnd: false, isStarred: false, words: tokenizeLine(content), rawText: content, singerTag: null };
+                    });
+                    currentLineIndex = lyricsData.length > 2 ? 2 : 0; currentCharIndex = 0; selectedTarget = { lIdx: currentLineIndex, wIdx: -1 };
+                    renderWorkspace(); exportBtn.disabled = false; alert(`💡 偵測到純文字或非標準格式！已初始化工作區！`);
+                }
+            }
+        } catch (err) { alert('載入檔案錯誤: ' + err.message); }
+    }
+
+    function initializeLyricsIfEmpty() {
+        if (lyricsData.length === 0) {
+            saveHistoryState(); const textLines = lyricsInput.value.split('\n').map(l => l.trim()).filter(l => l);
+            lyricsData = textLines.map(line => { return { time: null, endTime: null, isWholeLine: false, isWaitingForEnd: false, isStarred: false, words: tokenizeLine(line), rawText: line, singerTag: null }; });
+            currentLineIndex = 0; currentCharIndex = 0; selectedTarget = { lIdx: 0, wIdx: -1 };
+        }
+    }
+
+    startBtn.addEventListener('click', () => {
+        try {
+            if (!audioPlayer.src) { alert('請先選擇 MP3 音檔！'); return; }
+            if (!lyricsInput.value.trim()) { alert('請先輸入歌詞！'); return; }
+            initializeLyricsIfEmpty(); renderWorkspace(); exportBtn.disabled = false; audioPlayer.play(); lyricsInput.blur();
+        } catch (err) { alert("啟動失敗: " + err.message); }
+    });
+
+    playbackCheckBtn.addEventListener('click', () => {
+        try {
+            if (!audioPlayer.src) { alert('請先選擇 MP3 音檔！'); return; }
+            if (!lyricsInput.value.trim()) { alert('請先輸入歌詞！'); return; }
+            initializeLyricsIfEmpty(); renderWorkspace(); exportBtn.disabled = false;
+            if (audioPlayer.paused) audioPlayer.play(); else audioPlayer.pause();
+            lyricsInput.blur();
+        } catch (err) { alert("檢查功能啟動失敗: " + err.message); }
+    });
+
+    window.selectAndClearWord = function(lIdx, wIdx) {
+        if (lyricsData.length === 0) return; disableAutoScrollUntil = Date.now() + 1500;
+        let lineItem = lyricsData[lIdx]; let wordItem = lineItem.words[wIdx]; if (!wordItem) return;
+        let anchorTime = wordItem.time || lineItem.time || (audioPlayer.currentTime + audioOffset);
+        saveHistoryState();
+        if (wordItem.char === '(R)' || wordItem.isRest) {
+            let isTrailing = true; for (let i = wIdx + 1; i < lineItem.words.length; i++) { if (!lineItem.words[i].isSpace && !lineItem.words[i].isPitchOnly) { isTrailing = false; break; } }
+            lineItem.words.splice(wIdx, 1);
+            if (isTrailing) { lineItem.isWaitingForEnd = true; currentLineIndex = lIdx; currentCharIndex = lineItem.words.length; } 
+            else {
+                let targetIdx = wIdx; while (targetIdx < lineItem.words.length && lineItem.words[targetIdx].isSpace) { targetIdx++; }
+                if (targetIdx < lineItem.words.length) { lineItem.words[targetIdx].time = null; delete lineItem.words[targetIdx].isUserModified; currentLineIndex = lIdx; currentCharIndex = targetIdx; }
+            }
+            renderWorkspace(); return;
+        } else {
+            wordItem.time = null; delete wordItem.isUserModified; lineItem.isWaitingForEnd = false; currentLineIndex = lIdx; currentCharIndex = wIdx;
+            renderWorkspace(); audioPlayer.currentTime = Math.max(0, (anchorTime - 1.5) - audioOffset);
+        }
+    };
+
+    window.deleteWholeLine = function(lIdx) {
+        if (lyricsData.length === 0 || lIdx === null || !lyricsData[lIdx]) return;
+        if (confirm(`⚠️ 確定要刪除第 ${lIdx + 1} 整行嗎？`)) {
+            saveHistoryState(); lyricsData.splice(lIdx, 1); currentLineIndex = Math.max(0, currentLineIndex - 1); selectedTarget.lIdx = Math.max(0, selectedTarget.lIdx - 1); selectedTarget.wIdx = -1; renderWorkspace();
+        }
+    };
+
+    window.deleteWord = function(lIdx, wIdx) {
+        if (lIdx === null || wIdx === null || !lyricsData[lIdx]) return;
+        let lineItem = lyricsData[lIdx]; if (!lineItem.words[wIdx]) return;
+        saveHistoryState();
+        let isRest = (lineItem.words[wIdx].char === '(R)' || lineItem.words[wIdx].isRest);
+        let isTrailing = true; for (let i = wIdx + 1; i < lineItem.words.length; i++) { if (!lineItem.words[i].isSpace && !lineItem.words[i].isPitchOnly) { isTrailing = false; break; } }
+        lineItem.words.splice(wIdx, 1); if (isRest && isTrailing) { lineItem.isWaitingForEnd = true; }
+        renderWorkspace();
+    };
+
+    window.editWordText = function(lIdx, wIdx) {
+        let lineItem = lyricsData[lIdx]; let word = lineItem.words[wIdx]; if (word.char === '(R)' || word.isSpace) return;
+        const wordSpan = document.getElementById(`word-${lIdx}-${wIdx}`); if (!wordSpan) return;
+        let textOnly = word.char.replace(/^\([^)]*\)*/, ""); const input = document.createElement('input');
+        input.className = 'inline-edit-input'; input.value = textOnly; input.style.width = Math.max(42, textOnly.length * 22) + 'px';
+        wordSpan.innerHTML = ''; wordSpan.appendChild(input); input.focus(); input.select(); let hasFinished = false;
+        function commitChange() { if (hasFinished) return; hasFinished = true; saveHistoryState(); if (input.value.trim() === "") { deleteWord(lIdx, wIdx); } else { word.char = input.value; } renderWorkspace(); }
+        input.addEventListener('blur', commitChange); input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') commitChange(); });
+    };
+
+    window.splitLineAtWord = function(lIdx, wIdx) {
+        if (lIdx === null || wIdx === null || !lyricsData[lIdx]) return;
+        let oldLine = lyricsData[lIdx]; if (oldLine.words.length === 0) return;
+        saveHistoryState(); let split_time = oldLine.words[wIdx].time || oldLine.time || 0;
+        let oldWords = oldLine.words.slice(0, wIdx); let newWords = oldLine.words.slice(wIdx);
+        oldLine.words = oldWords; oldLine.rawText = oldWords.map(w => w.char).join('').trim();
+        if (newWords.length > 0) newWords[0].time = split_time;
+        lyricsData.splice(lIdx + 1, 0, { time: split_time, endTime: null, isWholeLine: false, isWaitingForEnd: oldLine.isWaitingForEnd, isStarred: oldLine.isStarred, words: newWords, rawText: newWords.map(w => w.char).join('').trim(), singerTag: oldLine.singerTag });
+        selectedTarget.lIdx = lIdx + 1; selectedTarget.wIdx = -1; renderWorkspace();
+    };
+
+    window.insertEmptyLineBelow = function(lIdx) {
+        if (lIdx === null || !lyricsData[lIdx]) return;
+        saveHistoryState(); lyricsData.splice(lIdx + 1, 0, { time: getDynamicLineEndTime(lyricsData[lIdx], lIdx), endTime: null, isWholeLine: false, isWaitingForEnd: false, isStarred: false, words: [], rawText: "", isInlineEditing: true, singerTag: null });
+        currentLineIndex = lIdx + 1; currentCharIndex = 0; selectedTarget.lIdx = lIdx + 1; selectedTarget.wIdx = -1; renderWorkspace();
+    };
+
+    window.handleMenuAction = function(action) {
+        let lIdx = rightClickTarget.lIdx; let wIdx = rightClickTarget.wIdx; if (lIdx === null || wIdx === null) return;
+        saveHistoryState();
+        if (action === 'left' || action === 'right') { lyricsData[lIdx].words.splice((action === 'left') ? wIdx : wIdx + 1, 0, { isInlineInserting: true, char: "" }); renderWorkspace(); } 
+        else if (action === 'split') splitLineAtWord(lIdx, wIdx); else if (action === 'deleteSingleWord') deleteWord(lIdx, wIdx); else if (action === 'emptyLine') insertEmptyLineBelow(lIdx);
+    };
+
+    window.editLineHeader = function(lIdx) { lyricsData[lIdx].isEditingHeader = true; renderWorkspace(); };
+
+    window.runQAProblemCheck = function() {
+        if (lyricsData.length === 0) { alert("工作區目前開頭沒有資料可供檢查。"); return; }
+        syncAllLineTimes(); 
+        let errorCount = 0; lyricsData.forEach(line => line.words.forEach(word => delete word.isQAError));
+        for (let i = 0; i < lyricsData.length; i++) {
+            let line = lyricsData[i]; if (line.time === null || line.isInlineEditing) continue;
+            let validWords = line.words.filter(w => !w.isSpace && !w.isPitchOnly);
+            let dynamicEndTime = getDynamicLineEndTime(line, i);
+            for (let j = 0; j < validWords.length; j++) {
+                let currWord = validWords[j]; if (currWord.time === null) continue;
+                if (currWord.time < line.time) { currWord.isQAError = true; errorCount++; }
+                if (j + 1 < validWords.length) {
+                    if (validWords[j + 1].time !== null && (currWord.time > validWords[j + 1].time || parseFloat((validWords[j + 1].time - currWord.time).toFixed(2)) < 0.02)) { currWord.isQAError = true; errorCount++; }
+                } else if (dynamicEndTime !== null) {
+                    if (currWord.isRest || currWord.char === "(R)") continue; 
+                    if (currWord.time > dynamicEndTime || parseFloat((dynamicEndTime - currWord.time).toFixed(2)) < 0.02) { currWord.isQAError = true; errorCount++; }
+                }
+            }
+            if (i + 1 < lyricsData.length && lyricsData[i + 1].time !== null && !lyricsData[i + 1].isInlineEditing) {
+                if (dynamicEndTime !== null && lyricsData[i + 1].time < dynamicEndTime) {
+                    let nextValid = lyricsData[i + 1].words.filter(w => !w.isSpace && !w.isPitchOnly); if (nextValid.length > 0) nextValid[0].isQAError = true;
+                    errorCount++;
+                }
+            }
+        }
+        renderWorkspace();
+        if (errorCount > 0) alert(`⚠️ 時序安全性體檢攔截！共偵測到 ${errorCount} 處「實際時序逆流」（已高亮紅框）。`);
+        else alert("🎉 [QA 完美閉合體檢通過]：時序與真實打點100%校正吻合，可以放心導出！");
+    };
+
+    function scrollToCenter(lineIndex) {
+        if (audioPlayer.paused) return; const lineEl = document.getElementById(`line-${lineIndex}`); if (!lineEl || !workspace) return;
+        workspace.scrollTop = lineEl.offsetTop - (workspace.clientHeight * 0.48) + (lineEl.offsetHeight / 2);
+    }
+
+    function buildKTVLineHTML(lineIdx) {
+        if (lineIdx < 0 || lineIdx >= lyricsData.length) return `<span style="color:#444;">(無歌詞)</span>`;
+        let lineItem = lyricsData[lineIdx];
+        if (lineItem.isWholeLine || !lineItem.words || lineItem.words.length === 0) {
+            return `<span class="ktv-word-node" id="ktv-line-whole-${lineIdx}">${lineItem.rawText}<span class="ktv-word-fill">${lineItem.rawText}</span></span>`;
+        }
+        let html = "";
+        lineItem.words.forEach((wordItem, wIdx) => {
+            if (wordItem.isPitchOnly) return;
+            if (wordItem.char === "(R)" || wordItem.isRest) return; 
+            html += `<span class="ktv-word-node" id="ktv-w-${lineIdx}-${wIdx}">${wordItem.char}<span class="ktv-word-fill">${wordItem.char}</span></span>`;
+        });
+        return html || `<span style="color:#444;">(間奏演奏中)</span>`;
+    }
+
+    function updateKTVPreview(curr) {
+        if (lyricsData.length === 0) { document.getElementById('ktv-line-1').innerHTML = ""; document.getElementById('ktv-line-2').innerHTML = ""; return; }
+        
+        let activeLineIdx = -1; let maxTime = -1;
+        for (let i = 0; i < lyricsData.length; i++) {
+            if (lyricsData[i].time !== null && curr >= lyricsData[i].time && lyricsData[i].time > maxTime) {
+                maxTime = lyricsData[i].time; activeLineIdx = i;
+            }
+        }
+        
+        let currentDisplayIdx = (activeLineIdx !== -1) ? activeLineIdx : currentLineIndex;
+        if (currentDisplayIdx >= lyricsData.length) currentDisplayIdx = lyricsData.length - 1;
+        if (currentDisplayIdx < 0) currentDisplayIdx = 0;
+        
+        let line1Target = -1; let line2Target = -1;
+        if (currentDisplayIdx % 2 === 0) { line1Target = currentDisplayIdx; line2Target = currentDisplayIdx + 1; } 
+        else { line1Target = currentDisplayIdx + 1; line2Target = currentDisplayIdx; }
+        
+        if (line1Target !== ktvRenderedLine1) { ktvRenderedLine1 = line1Target; document.getElementById('ktv-line-1').innerHTML = buildKTVLineHTML(line1Target); }
+        if (line2Target !== ktvRenderedLine2) { ktvRenderedLine2 = line2Target; document.getElementById('ktv-line-2').innerHTML = buildKTVLineHTML(line2Target); }
+        
+        document.getElementById('ktv-line-1').style.opacity = (currentDisplayIdx === line1Target) ? "1" : "0.4";
+        document.getElementById('ktv-line-2').style.opacity = (currentDisplayIdx === line2Target) ? "1" : "0.4";
+        
+        [line1Target, line2Target].forEach(lIdx => {
+            if (lIdx < 0 || lIdx >= lyricsData.length) return;
+            let lineItem = lyricsData[lIdx];
+            
+            let fillCustomColor = "#00f0ff"; 
+            if (lineItem.singerTag === 'M') fillCustomColor = "#00a2ff";      
+            else if (lineItem.singerTag === 'W') fillCustomColor = "#ff3366"; 
+            else if (lineItem.singerTag === 'C') fillCustomColor = "#28a745"; 
+
+            if (lineItem.isWholeLine) {
+                let fillSpan = document.querySelector(`#ktv-line-whole-${lIdx} .ktv-word-fill`);
+                if (fillSpan) {
+                    fillSpan.style.color = fillCustomColor;
+                    let lineStartTime = lineItem.time; let lineEndTime = getDynamicLineEndTime(lineItem, lIdx);
+                    if (lineStartTime === null) fillSpan.style.width = "0%";
+                    else if (lineEndTime === null || lineEndTime <= lineStartTime) fillSpan.style.width = (curr >= lineStartTime) ? "100%" : "0%";
+                    else {
+                        if (curr < lineStartTime) fillSpan.style.width = "0%";
+                        else if (curr > lineEndTime) fillSpan.style.width = "100%" ;
+                        else fillSpan.style.width = (((curr - lineStartTime) / (lineEndTime - lineStartTime)) * 100) + "%";
+                    }
+                }
+                return;
+            }
+            lineItem.words.forEach((word, wIdx) => {
+                if (word.isPitchOnly || word.isRest) return;
+                let fillSpan = document.querySelector(`#ktv-w-${lIdx}-${wIdx} .ktv-word-fill`); if (!fillSpan) return;
+                fillSpan.style.color = fillCustomColor; 
+                
+                if (word.time === null) { fillSpan.style.width = "0%"; return; }
+                let wordStartTime = word.time; let wordEndTime = null;
+                
+                for (let nextW = wIdx + 1; nextW < lineItem.words.length; nextW++) {
+                    if (lineItem.words[nextW].time !== null && !lineItem.words[nextW].isPitchOnly) {
+                        wordEndTime = lineItem.words[nextW].time; break;
+                    }
+                }
+                if (wordEndTime === null) wordEndTime = getDynamicLineEndTime(lineItem, lIdx);
+                
+                if (wordEndTime === null || wordEndTime <= wordStartTime) {
+                    fillSpan.style.width = (curr >= wordStartTime) ? "100%" : "0%";
+                } else {
+                    if (curr < wordStartTime) fillSpan.style.width = "0%";
+                    else if (curr > wordEndTime) fillSpan.style.width = "100%";
+                    else fillSpan.style.width = (((curr - wordStartTime) / (wordEndTime - wordStartTime)) * 100) + "%";
+                }
+            });
+        });
+    }
+
+    function updateVisualCursor(curr) {
+        let activeLineIdx = -1; let maxTime = -1;
+        for (let i = 0; i < lyricsData.length; i++) { if (lyricsData[i].time !== null && curr >= lyricsData[i].time && lyricsData[i].time > maxTime) { maxTime = lyricsData[i].time; activeLineIdx = i; } }
+        document.querySelectorAll('.lyric-line').forEach(el => el.classList.remove('playback-active'));
+        
+        if (Date.now() > disableAutoScrollUntil && !audioPlayer.paused) { 
+            let targetScrollIdx = (activeLineIdx !== -1) ? activeLineIdx : currentLineIndex; scrollToCenter(targetScrollIdx); 
+        }
+        if (audioPlayer.duration) { document.getElementById('timelineFill').style.width = (audioPlayer.currentTime / audioPlayer.duration) * 100 + '%'; }
+        if (activeLineIdx !== -1 && !lyricsData[activeLineIdx].isInlineEditing) {
+            const lineDiv = document.getElementById(`line-${activeLineIdx}`); if (!lineDiv) return; lineDiv.classList.add('playback-active');
+            let cursorEl = getCursorElement(); if (lyricsData[activeLineIdx].isWholeLine) { lineDiv.appendChild(cursorEl); return; }
+            let activeWordIdx = -1; for (let j = 0; j < lyricsData[activeLineIdx].words.length; j++) { if (lyricsData[activeLineIdx].words[j].time !== null && lyricsData[activeLineIdx].words[j].time <= curr) activeWordIdx = j; }
+            let dynamicEndTime = getDynamicLineEndTime(lyricsData[activeLineIdx], activeLineIdx);
+            if (dynamicEndTime !== null && curr >= dynamicEndTime) { lineDiv.appendChild(cursorEl); } 
+            else if (activeWordIdx !== -1) {
+                let tIdx = activeWordIdx; while (tIdx >= 0 && lyricsData[activeLineIdx].words[tIdx].isPitchOnly) tIdx--;
+                if (tIdx >= 0) { const span = document.getElementById(`word-${activeLineIdx}-${tIdx}`); if (span) span.parentNode.insertBefore(cursorEl, span.nextSibling); }
+            } else { const first = document.getElementById(`word-${activeLineIdx}-0`); if (first) first.parentNode.insertBefore(cursorEl, first); else lineDiv.appendChild(cursorEl); }
+        }
+    }
+
+    function getCursorElement() { let cursor = document.getElementById('playback-cursor'); if (!cursor) { cursor = document.createElement('span'); cursor.id = 'playback-cursor'; cursor.innerText = '|'; } return cursor; }
+
+    function highPrecisionRenderLoop() {
+        const globalCurrentTime = audioPlayer.currentTime + audioOffset;
+        document.getElementById('precisionTime').innerText = `[${formatTime(audioPlayer.currentTime)}]` + (audioOffset !== 0 ? ` (補償: ${audioOffset > 0 ? '+' : ''}${audioOffset}s)` : '');
+        updateVisualCursor(globalCurrentTime); updateKTVPreview(globalCurrentTime); requestAnimationFrame(highPrecisionRenderLoop);
+    }
+    requestAnimationFrame(highPrecisionRenderLoop);
+
+    function renderWorkspace() {
+        syncAllLineTimes(); 
+        ktvRenderedLine1 = -1; ktvRenderedLine2 = -1; workspace.innerHTML = ''; if (lyricsData.length === 0) return;
+        lyricsData.forEach((lineItem, lIdx) => {
+            const lineDiv = document.createElement('div'); lineDiv.id = `line-${lIdx}`;
+            lineDiv.className = `lyric-line ${lIdx === currentLineIndex ? 'active' : ''} ${(selectedTarget.lIdx === lIdx && selectedTarget.wIdx === -1) ? 'selected-line' : ''}`;
+            
+            if (lineItem.singerTag === 'M') {
+                lineDiv.style.borderLeft = "6px solid #007bff";
+                if (lIdx !== currentLineIndex && selectedTarget.lIdx !== lIdx) lineDiv.style.background = "#f4f8ff";
+            } else if (lineItem.singerTag === 'W') {
+                lineDiv.style.borderLeft = "6px solid #dc3545";
+                if (lIdx !== currentLineIndex && selectedTarget.lIdx !== lIdx) lineDiv.style.background = "#fff6f6";
+            } else if (lineItem.singerTag === 'C') {
+                lineDiv.style.borderLeft = "6px solid #28a745";
+                if (lIdx !== currentLineIndex && selectedTarget.lIdx !== lIdx) lineDiv.style.background = "#f5fdf7";
+            }
+
+            const headerDiv = document.createElement('div'); headerDiv.className = 'line-header';
+            const starSpan = document.createElement('span'); starSpan.className = `star-btn ${lineItem.isStarred ? 'active' : ''}`; starSpan.innerHTML = lineItem.isStarred ? '★' : '☆';
+            starSpan.onclick = (e) => { e.stopPropagation(); lineItem.isStarred = !lineItem.isStarred; renderWorkspace(); }; headerDiv.appendChild(starSpan);
+            
+            if (lineItem.singerTag) {
+                const badge = document.createElement('span');
+                if (lineItem.singerTag === 'M') { badge.style.cssText = "background:#007bff; color:white; padding:2px 6px; border-radius:4px; font-size:12px; margin-right:5px; font-weight:bold;"; badge.innerText = "♂ 男"; } 
+                else if (lineItem.singerTag === 'W') { badge.style.cssText = "background:#dc3545; color:white; padding:2px 6px; border-radius:4px; font-size:12px; margin-right:5px; font-weight:bold;"; badge.innerText = "♀ 女"; } 
+                else if (lineItem.singerTag === 'C') { badge.style.cssText = "background:#28a745; color:white; padding:2px 6px; border-radius:4px; font-size:12px; margin-right:5px; font-weight:bold;"; badge.innerText = "👫 合唱"; }
+                headerDiv.appendChild(badge);
+            }
+
+            let dynamicEndTime = getDynamicLineEndTime(lineItem, lIdx);
+            if (lineItem.isEditingHeader) {
+                const input = document.createElement('input'); input.className = 'inline-edit-input'; input.style.fontSize = '13px'; input.style.width = '100px'; input.value = formatTime(lineItem.time);
+                headerDiv.appendChild(document.createTextNode(`【第 ${lIdx + 1} 行】: `)); headerDiv.appendChild(input); setTimeout(() => { input.focus(); input.select(); }, 50);
+                let fin = false; input.addEventListener('blur', () => { if (fin) return; fin = true; if (input.value.trim() !== "") { saveHistoryState(); lineItem.time = parseTimeToSeconds(input.value); } delete lineItem.isEditingHeader; renderWorkspace(); });
+            } else { 
+                headerDiv.appendChild(document.createTextNode(`【第 ${lIdx + 1} 行】 [開始 ${formatTime(lineItem.time)}] ${dynamicEndTime !== null ? '[結束 ' + formatTime(dynamicEndTime) + ']' : ''}`)); 
+            }
+            headerDiv.ondblclick = () => editLineHeader(lIdx); lineDiv.appendChild(headerDiv);
+            if (lineItem.isInlineEditing) {
+                const rowIn = document.createElement('input'); rowIn.className = 'inline-edit-input'; rowIn.style.width = '85%'; setTimeout(() => rowIn.focus(), 50);
+                rowIn.addEventListener('blur', () => { saveHistoryState(); if (rowIn.value.trim() === "") lyricsData.splice(lIdx, 1); else { lineItem.words = tokenizeLine(rowIn.value); delete lineItem.isInlineEditing; } renderWorkspace(); });
+                lineDiv.appendChild(rowIn); workspace.appendChild(lineDiv); return;
+            }
+            lineItem.words.forEach((wordItem, wIdx) => {
+                if (wordItem.isInlineInserting) {
+                    const insIn = document.createElement('input'); insIn.className = 'inline-edit-input'; insIn.style.width = '75px'; setTimeout(() => insIn.focus(), 50);
+                    insIn.addEventListener('blur', () => { saveHistoryState(); if (insIn.value.trim() === "") lineItem.words.splice(wIdx, 1); else lineItem.words[wIdx] = { char: insIn.value, rawPitch: "", time: null, isSpace: false, isRest: false, isPitchOnly: false }; renderWorkspace(); });
+                    lineDiv.appendChild(insIn); return;
+                }
+                if (wordItem.isPitchOnly) return;
+                const wordSpan = document.createElement('span'); wordSpan.className = 'word-box'; wordSpan.id = `word-${lIdx}-${wIdx}`;
+                
+                if (wordItem.isSpace) { 
+                    wordSpan.className += ' space-node'; wordSpan.innerHTML = '&nbsp;'; 
+                } else { 
+                    wordSpan.innerText = (wordItem.char === '(R)' || wordItem.isRest) ? '(R)' : wordItem.char; 
+                    if (wordItem.char === '(R)' || wordItem.isRest) wordSpan.className += ' rest-node'; 
+                }
+                
+                if (wordItem.time !== null) wordSpan.className += ' tagged'; if (wordItem.isQAError) wordSpan.className += ' qa-error';
+                if (lIdx === currentLineIndex && wIdx === currentCharIndex && !lineItem.isWholeLine && !lineItem.isWaitingForEnd) wordSpan.className += ' current';
+                if (selectedTarget.lIdx === lIdx && selectedTarget.wIdx === wIdx) wordSpan.className += ' selected-word';
+                wordSpan.onclick = (e) => {
+                    e.stopPropagation(); selectedTarget.lIdx = lIdx; selectedTarget.wIdx = wIdx; renderWorkspace();
+                    if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; editWordText(lIdx, wIdx); } 
+                    else { clickTimer = setTimeout(() => { clickTimer = null; selectAndClearWord(lIdx, wIdx); }, 220); }
+                };
+                wordSpan.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); selectedTarget.lIdx = lIdx; selectedTarget.wIdx = wIdx; rightClickTarget.lIdx = lIdx; rightClickTarget.wIdx = wIdx; renderWorkspace(); customMenu.style.left = e.pageX + 'px'; customMenu.style.top = e.pageY + 'px'; customMenu.style.display = 'block'; };
+                lineDiv.appendChild(wordSpan);
+            });
+            if (lineItem.isWaitingForEnd) { const badge = document.createElement('span'); badge.className = 'waiting-end-badge'; badge.innerText = ' ⌛ [等待下一句：Space鍵接續 / 0或R置入休止符]'; lineDiv.appendChild(badge); }
+            workspace.appendChild(lineDiv);
+        });
+        if (Date.now() > disableAutoScrollUntil && audioPlayer.paused) {
+            const targetEl = document.getElementById(`line-${selectedTarget.lIdx}`);
+            if (targetEl && workspace) {
+                const bounds = targetEl.getBoundingClientRect(); const containerBounds = workspace.getBoundingClientRect();
+                if (bounds.top < containerBounds.top || bounds.bottom > containerBounds.bottom) { targetEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+            }
+        }
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') { e.preventDefault(); executeUndo(); return; }
+        if ((e.ctrlKey || e.metaKey) && e.code === 'KeyY') { e.preventDefault(); executeRedo(); return; }
+        if (document.activeElement === lyricsInput || document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+        if (lyricsData.length === 0) return; const currentTime = audioPlayer.currentTime + audioOffset;
+        
+        if (e.code === 'Digit1' || e.code === 'Numpad1' || e.code === 'Digit2' || e.code === 'Numpad2' || e.code === 'Digit3' || e.code === 'Numpad3') {
+            e.preventDefault();
+            let activeLineIdx = -1; let maxTime = -1;
+            for (let i = 0; i < lyricsData.length; i++) {
+                if (lyricsData[i].time !== null && currentTime >= lyricsData[i].time && lyricsData[i].time > maxTime) {
+                    maxTime = lyricsData[i].time; activeLineIdx = i;
+                }
+            }
+            let targetIdx = (activeLineIdx !== -1) ? activeLineIdx : currentLineIndex;
+            if (targetIdx >= 0 && targetIdx < lyricsData.length) {
+                saveHistoryState();
+                let targetTag = '';
+                if (e.code === 'Digit1' || e.code === 'Numpad1') targetTag = 'M';
+                else if (e.code === 'Digit2' || e.code === 'Numpad2') targetTag = 'W';
+                else if (e.code === 'Digit3' || e.code === 'Numpad3') targetTag = 'C';
+                
+                lyricsData[targetIdx].singerTag = (lyricsData[targetIdx].singerTag === targetTag) ? null : targetTag;
+                renderWorkspace();
+            }
+            return;
+        }
+
+        if (e.code === 'KeyQ') {
+            e.preventDefault();
+            audioPlayer.currentTime = Math.max(0, audioPlayer.currentTime - 2);
+            disableAutoScrollUntil = Date.now() + 1000;
+            return;
+        }
+        if (e.code === 'KeyE') {
+            e.preventDefault();
+            audioPlayer.currentTime = Math.min(audioPlayer.duration || 0, audioPlayer.currentTime + 2);
+            disableAutoScrollUntil = Date.now() + 1000;
+            return;
+        }
+
+        if (audioPlayer.paused) {
+            if (e.code === 'ArrowUp' && selectedTarget.lIdx > 0) { e.preventDefault(); selectedTarget.lIdx--; selectedTarget.wIdx = -1; renderWorkspace(); return; }
+            if (e.code === 'ArrowDown' && selectedTarget.lIdx < lyricsData.length - 1) { e.preventDefault(); selectedTarget.lIdx++; selectedTarget.wIdx = -1; renderWorkspace(); return; }
+        }
+        if (e.key === 'Delete') { e.preventDefault(); if (selectedTarget.wIdx === -1) deleteWholeLine(selectedTarget.lIdx); else deleteWord(selectedTarget.lIdx, selectedTarget.wIdx); return; }
+        if (e.key === 'Enter') { e.preventDefault(); if (selectedTarget.wIdx === -1) insertEmptyLineBelow(selectedTarget.lIdx); else splitLineAtWord(selectedTarget.lIdx, selectedTarget.wIdx); return; }
+        if (e.code === 'KeyA') { e.preventDefault(); if (audioPlayer.src) { if (audioPlayer.paused) audioPlayer.play(); else audioPlayer.pause(); } return; }
+        
+        // 🚀【蓋印標記】：加入 isUserModified = true，代表這是本次打點新產生的時間
+        if (e.code === 'Digit0' || e.code === 'Numpad0' || e.code === 'KeyR') {
+            e.preventDefault(); if (currentLineIndex >= lyricsData.length) return; let currentLine = lyricsData[currentLineIndex];
+            saveHistoryState(); 
+            if (currentLine.isWaitingForEnd) {
+                if (currentLine.words.length > 0 && currentLine.words[currentLine.words.length - 1].isRest) {
+                    currentLine.words[currentLine.words.length - 1].time = currentTime;
+                    currentLine.words[currentLine.words.length - 1].isUserModified = true;
+                } else {
+                    currentLine.words.push({ char: "(R)", rawPitch: "", time: currentTime, isSpace: false, isRest: true, isPitchOnly: false, isUserModified: true });
+                }
+                currentLine.isWaitingForEnd = false; currentLineIndex++; currentCharIndex = 0; renderWorkspace(); return;
+            }
+            if (currentCharIndex === 0) { currentLine.time = currentTime; currentLine.isWholeLine = false; }
+            if (currentLine.words[currentCharIndex] && currentLine.words[currentCharIndex].isRest) { 
+                currentLine.words[currentCharIndex].time = currentTime; 
+                currentLine.words[currentCharIndex].isUserModified = true;
+                currentCharIndex++; 
+            } 
+            else { 
+                currentLine.words.splice(currentCharIndex, 0, { char: "(R)", rawPitch: "", time: currentTime, isSpace: false, isRest: true, isPitchOnly: false, isUserModified: true });
+                currentCharIndex++; 
+            }
+            if (currentCharIndex >= currentLine.words.length) currentLine.isWaitingForEnd = true;
+            renderWorkspace(); return;
+        }
+
+        // 🚀【蓋印標記】：加入 isUserModified = true，代表這是本次打點新產生的時間
+        if (e.code === 'Space') {
+            e.preventDefault(); if (currentLineIndex >= lyricsData.length) return; let currentLine = lyricsData[currentLineIndex];
+            saveHistoryState(); 
+            if (currentLine.isWaitingForEnd) {
+                currentLine.endTime = currentTime; currentLine.isWaitingForEnd = false; currentLineIndex++; currentCharIndex = 0;
+                if (currentLineIndex < lyricsData.length) {
+                    let nextLine = lyricsData[currentLineIndex]; if (nextLine.time === null) nextLine.time = currentTime; nextLine.isWholeLine = false;
+                    if (currentCharIndex < nextLine.words.length) { 
+                        nextLine.words[currentCharIndex].time = currentTime; 
+                        nextLine.words[currentCharIndex].isUserModified = true;
+                        nextLine.time = currentTime; currentCharIndex++; 
+                    }
+                    if (currentCharIndex >= nextLine.words.length) nextLine.isWaitingForEnd = true;
+                }
+                renderWorkspace(); return;
+            }
+            if (currentCharIndex === 0) { currentLine.time = currentTime; currentLine.isWholeLine = false; }
+            if (!currentLine.words[currentCharIndex]) return; 
+            currentLine.words[currentCharIndex].time = currentTime; 
+            currentLine.words[currentCharIndex].isUserModified = true;
+            currentCharIndex++;
+            if (currentCharIndex >= currentLine.words.length) currentLine.isWaitingForEnd = true;
+            renderWorkspace(); return;
+        }
+
+        // 🚀【核心修正】：智慧無損退回鎖。現在只有當字詞帶有 isUserModified 時才會洗掉時間；如果是原本導入的完好時間則絕對不刪除！
+        if (e.code === 'Backspace') {
+            e.preventDefault(); let timeToRewind = null; saveHistoryState(); 
+            if (currentLineIndex >= lyricsData.length) {
+                currentLineIndex = lyricsData.length - 1; let lastLine = lyricsData[currentLineIndex]; timeToRewind = lastLine.endTime; lastLine.endTime = null; lastLine.isWaitingForEnd = true; currentCharIndex = lastLine.words.length; renderWorkspace();
+                if (timeToRewind !== null) audioPlayer.currentTime = Math.max(0, (timeToRewind - 0.8) - audioOffset); return;
+            }
+            let currentLine = lyricsData[currentLineIndex];
+            if (currentLine.isWaitingForEnd) {
+                currentLine.isWaitingForEnd = false; currentCharIndex = currentLine.words.length - 1; 
+                if (currentCharIndex >= 0 && currentLine.words[currentCharIndex]) {
+                    timeToRewind = currentLine.words[currentCharIndex].time;
+                    if (currentLine.words[currentCharIndex].isUserModified) {
+                        currentLine.words[currentCharIndex].time = null;
+                        delete currentLine.words[currentCharIndex].isUserModified;
+                        if (currentCharIndex === 0) currentLine.time = null;
+                    }
+                }
+            } else if (currentCharIndex > 0) {
+                currentCharIndex--;
+                if (currentLine.words[currentCharIndex]) { 
+                    timeToRewind = currentLine.words[currentCharIndex].time; 
+                    if (currentLine.words[currentCharIndex].isUserModified) {
+                        currentLine.words[currentCharIndex].time = null;
+                        delete currentLine.words[currentCharIndex].isUserModified;
+                        if (currentCharIndex === 0) currentLine.time = null;
+                    }
+                }
+            } else if (currentCharIndex === 0 && currentLineIndex > 0) { 
+                currentLineIndex--; 
+                lyricsData[currentLineIndex].isWaitingForEnd = true; 
+                currentCharIndex = lyricsData[currentLineIndex].words.length;
+                if (currentCharIndex > 0 && lyricsData[currentLineIndex].words[currentCharIndex - 1]) {
+                    timeToRewind = lyricsData[currentLineIndex].words[currentCharIndex - 1].time;
+                } else {
+                    timeToRewind = lyricsData[currentLineIndex].time;
+                }
+            }
+            renderWorkspace(); if (timeToRewind !== null) audioPlayer.currentTime = Math.max(0, (timeToRewind - 0.8) - audioOffset);
+        }
+    });
+
+    const track = document.getElementById('timelineTrack');
+    if (track) { track.addEventListener('click', (e) => { if (!audioPlayer.duration || isNaN(audioPlayer.duration)) return; const rect = track.getBoundingClientRect(); audioPlayer.currentTime = ((e.clientX - rect.left) / rect.width) * audioPlayer.duration; disableAutoScrollUntil = Date.now() + 1000; }); }
+
+    exportBtn.addEventListener('click', () => {
+        syncAllLineTimes(); 
+        let lrcContent = "";
+        lyricsData.forEach((line, index) => {
+            if (line.time === null) return; const lineTimeStr = formatTime(line.time);
+            let prefix = line.singerTag ? `{${line.singerTag}}` : "";
+            
+            if (line.isWholeLine) { lrcContent += `[${lineTimeStr}]${prefix}${line.rawText}\n`; } 
+            else {
+                let lineStr = `[${lineTimeStr}]${prefix}`;
+                line.words.forEach(word => {
+                    if (word.isRest || word.char === "(R)") { 
+                        if (word.time !== null) lineStr += `<${formatTime(word.time)}>(R)`; 
+                    } else { 
+                        if (word.time !== null) lineStr += `<${formatTime(formatTime(word.time) === "00:00.00" ? line.time : word.time)}>${word.char}`; else lineStr += word.char; 
+                    }
+                });
+                let hasRestAtEnd = false; if (line.words.length > 0) { let lastWord = line.words[line.words.length - 1]; if (lastWord.isRest || lastWord.char === "(R)") { hasRestAtEnd = true; } }
+                if (!hasRestAtEnd) {
+                    let finalLineEndTime = getDynamicLineEndTime(line, index);
+                    if (finalLineEndTime !== null) { lineStr += `<${formatTime(finalLineEndTime)}>`; }
+                }
+                lrcContent += lineStr + "\n";
+            }
+        });
+        const blob = new Blob([lrcContent], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a');
+        a.href = url; a.download = "output_master_edition.lrc"; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    });
+</script>
+</body>
+</html>
