@@ -8,7 +8,7 @@
         .container { display: flex; gap: 20px; max-width: 1400px; margin: 0 auto; }
         .panel { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
         .workspace-panel { flex: 1.6; }
-        textarea { width: 100%; height: 150px; margin-bottom: 10px; font-size: 16px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: monospace; }
+        textarea { width: 100%; height: 120px; margin-bottom: 10px; font-size: 16px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: monospace; }
         audio { width: 100%; margin: 10px 0; }
         
         .timer-display { font-family: "Courier New", Courier, monospace; font-size: 32px; font-weight: bold; color: #007bff; background: #222; padding: 10px; border-radius: 6px; text-align: center; margin: 10px 0; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); letter-spacing: 1px; }
@@ -34,14 +34,14 @@
         .btn-offset { background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
         .btn-offset:hover { background: #5a6268; }
         
-        #workspace { position: relative; max-height: 380px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: #fafafa; scroll-behavior: smooth; }
+        #workspace { position: relative; max-height: 420px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; background: #fafafa; scroll-behavior: smooth; }
         .lyric-line { padding: 12px; margin: 8px 0; border-radius: 4px; background: white; border-left: 4px solid #ccc; transition: all 0.2s; position: relative; }
         .lyric-line.active { background: #e8f4fd; border-left-color: #007bff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         
         .lyric-line.selected-line { border-left-color: #007bff !important; background: #f0f7ff !important; box-shadow: 0 0 8px rgba(0,123,255,0.25); }
         .lyric-line.playback-active { border-left-color: #6f42c1 !important; background: #f3ebff !important; box-shadow: 0 2px 6px rgba(111,66,193,0.15); }
         
-        .line-header { font-size: 13px; color: #495057; font-family: monospace; margin-bottom: 6px; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px; font-weight: bold; }
+        .line-header { font-size: 13px; color: #495057; font-family: monospace; margin-bottom: 6px; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px; font-weight: bold; flex-wrap: wrap; }
         .line-header:hover { color: #007bff; text-decoration: underline; }
         
         .star-btn { cursor: pointer; font-size: 18px; color: #adb5bd; transition: color 0.1s ease, transform 0.1s ease; user-select: none; display: inline-block; line-height: 1; }
@@ -113,11 +113,11 @@
 </head>
 <body>
 
-<h2>🎵 逐字級 LRC 歌詞時間軸校正器 Pro Ultimate+ (退回鍵智慧無損修正版)</h2>
+<h2>🎵 逐字級 LRC 歌詞時間軸校正器 Pro Ultimate+ (雙軌合唱智慧比對修復版)</h2>
 
 <div class="hint-box">
     <div>
-        <b>🎤 退回功能強固更新：</b> 現在按退回鍵（Backspace）只會清除您在本次錄製中「按過空白鍵或R」標記的時間點。若字詞帶有原本匯入的正確時間，則只會單純退回游標與音樂，絕對不會刪除原本的時間！
+        <b>🎤 雙軌模式解鎖：</b> 勾選下方的「啟用雙軌合唱比對模式」即可匯入兩份 LRC。系統會自動進行交叉時間軸排序，並將重疊句智慧標記為 <b>{C}合唱</b> 獨立分行導出！
     </div>
     <button class="btn btn-secondary" onclick="document.getElementById('helpModal').style.display='flex'" style="padding: 6px 12px; font-size: 13px;">⌨️ 打點快捷鍵說明書</button>
 </div>
@@ -128,12 +128,23 @@
         <label style="font-weight: bold;">步驟一：選擇 MP3 音檔</label>
         <input type="file" id="audioInput" accept="audio/mp3" style="margin-bottom: 12px;" onclick="this.value=''"><br>
         
-        <label style="font-weight: bold;">步驟二：匯入歌詞軸檔 (支援 LRC、TXT 或 🌟OpenLRC JSON 檔)</label>
-        <input type="file" id="lrcInput" accept=".lrc,.txt,.json" style="margin-bottom: 12px;" onclick="this.value=''"><br>
+        <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 10px; border-radius: 6px; margin-bottom: 12px;">
+            <label style="font-weight: bold; cursor: pointer; color: #856404;">
+                <input type="checkbox" id="dualTrackMode" onchange="toggleDualTrackUI()"> 🌟 啟用雙軌合唱比對模式
+            </label>
+        </div>
+
+        <label id="lrcLabel1" style="font-weight: bold;">步驟二：匯入歌詞軸檔 (支援 LRC、TXT 或 OpenLRC JSON)</label>
+        <input type="file" id="lrcInput" accept=".lrc,.txt,.json" style="margin-bottom: 12px;" onclick="this.value=''">
         
-        <label style="font-weight: bold;">步驟三：編輯或確認歌詞內容</label>
-        <textarea id="lyricsInput" placeholder="請在此貼上歌詞...">[00:00.20]歌曲:忘川河畔我望不穿(原唱)
-[00:05.00]歌手:趙洋</textarea>
+        <div id="track2InputGroup" style="display: none; background: #f0f3ff; border: 1px solid #d1d9ff; padding: 10px; border-radius: 6px; margin-bottom: 12px;">
+            <label style="font-weight: bold; color: #2b43b6;">匯入第二軌 LRC (例如女聲/副唱軌)：</label>
+            <input type="file" id="lrcInput2" accept=".lrc,.txt" onclick="this.value=''">
+        </div>
+        
+        <label style="font-weight: bold;">步驟三：手動編輯/預覽基本歌詞</label>
+        <textarea id="lyricsInput" placeholder="請在此貼上歌詞...">[00:00.20]歌曲:雙軌合唱智慧比對
+[00:05.00]歌手:自動混編系統</textarea>
         
         <div style="margin-bottom: 10px; display: flex; gap: 4px; flex-wrap: wrap;">
             <button class="btn" id="startBtn">▶ 開始錄製 / 播放音訊</button>
@@ -238,11 +249,6 @@
                     <td><span class="hotkey-badge">Backspace 鍵</span></td>
                     <td><b>撤回上一個字的打點時間</b>，音訊會智慧微幅快退追蹤（未更動的字無損保護）</td>
                 </tr>
-                <tr>
-                    <td><b>就地編輯功能</b></td>
-                    <td><span class="hotkey-badge">Enter 鍵</span> / <span class="hotkey-badge">Delete 鍵</span></td>
-                    <td>Inline 原地插入空行 / 快速刪除單字塊與整行歌詞</td>
-                </tr>
             </tbody>
         </table>
         <button class="btn btn-secondary" onclick="document.getElementById('helpModal').style.display='none'" style="align-self: flex-end; padding: 8px 20px;">關閉說明書</button>
@@ -265,6 +271,10 @@
     let clickTimer = null; 
     let audioOffset = 0.0; 
     
+    // 儲存雙軌各自解析出來的原始陣列
+    let track1Lines = [];
+    let track2Lines = [];
+
     let selectedTarget = { lIdx: 0, wIdx: -1 };
     let rightClickTarget = { lIdx: null, wIdx: null }; 
 
@@ -274,6 +284,20 @@
     let undoStack = [];
     let redoStack = [];
     const MAX_HISTORY_SIZE = 50; 
+
+    function toggleDualTrackUI() {
+        const isDual = document.getElementById('dualTrackMode').checked;
+        document.getElementById('track2InputGroup').style.display = isDual ? 'block' : 'none';
+        document.getElementById('lrcLabel1').innerText = isDual ? '步驟二：匯入第一軌 LRC (例如男聲/主唱軌)：' : '步驟二：匯入歌詞軸檔 (支援 LRC、TXT 或 OpenLRC JSON)';
+        resetTracksData();
+    }
+
+    function resetTracksData() {
+        track1Lines = [];
+        track2Lines = [];
+        lyricsData = [];
+        renderWorkspace();
+    }
 
     function syncAllLineTimes() {
         lyricsData.forEach((line) => {
@@ -320,6 +344,7 @@
 
     const audioInput = document.getElementById('audioInput');
     const lrcInput = document.getElementById('lrcInput');
+    const lrcInput2 = document.getElementById('lrcInput2');
     const lyricsInput = document.getElementById('lyricsInput');
     const startBtn = document.getElementById('startBtn');
     const playbackCheckBtn = document.getElementById('playbackCheckBtn');
@@ -423,9 +448,107 @@
     lrcInput.addEventListener('change', (e) => {
         const file = e.target.files[0]; if (!file) return;
         const isJson = file.name.toLowerCase().endsWith('.json'); const reader = new FileReader();
-        reader.onload = function(evt) { if (isJson) { parseAndLoadOpenLRCJson(evt.target.result); } else { parseAndLoadLRC(evt.target.result); } };
+        reader.onload = function(evt) { 
+            if (isJson) { parseAndLoadOpenLRCJson(evt.target.result); } 
+            else { 
+                track1Lines = parseCoreLrcText(evt.target.result);
+                handleLrcCombining();
+            } 
+        };
         reader.readAsText(file, 'utf-8');
     });
+
+    lrcInput2.addEventListener('change', (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) { 
+            track2Lines = parseCoreLrcText(evt.target.result);
+            handleLrcCombining();
+        };
+        reader.readAsText(file, 'utf-8');
+    });
+
+    // 🚀【核心整合器】：雙軌智慧混編排序與合唱偵測
+    function handleLrcCombining() {
+        const isDual = document.getElementById('dualTrackMode').checked;
+        if (!isDual) {
+            lyricsData = track1Lines;
+        } else {
+            if (track1Lines.length === 0 && track2Lines.length === 0) return;
+            
+            // 過濾掉第二軌重複的標頭資訊
+            let t2Filtered = track2Lines.filter(l => !l.rawText.startsWith("歌曲:") && !l.rawText.startsWith("歌手:") && !l.rawText.startsWith("歌名:"));
+            
+            // 給予雙軌基礎屬性，第一軌預設男聲，第二軌預設女聲
+            track1Lines.forEach(l => { l.track = 1; if(!l.singerTag) l.singerTag = 'M'; });
+            t2Filtered.forEach(l => { l.track = 2; if(!l.singerTag) l.singerTag = 'W'; });
+            
+            // 交叉深拷貝合併
+            let combined = [...JSON.parse(JSON.stringify(track1Lines)), ...JSON.parse(JSON.stringify(t2Filtered))];
+            
+            // 全域依據時間軸排序
+            combined.sort((a, b) => (a.time ?? Infinity) - (b.time ?? Infinity));
+            
+            // 智慧合唱偵測：如果前後兩行來自不同軌道，且時間差在 0.6 秒內，自動升格為 {C} 合唱！
+            for (let i = 0; i < combined.length - 1; i++) {
+                let curr = combined[i];
+                let next = combined[i+1];
+                if (curr.time !== null && next.time !== null && curr.track !== next.track) {
+                    if (Math.abs(curr.time - next.time) <= 0.6) {
+                        curr.singerTag = 'C';
+                        next.singerTag = 'C';
+                    }
+                }
+            }
+            lyricsData = combined;
+        }
+        
+        let rawTextLines = lyricsData.map(l => l.rawText);
+        lyricsInput.value = rawTextLines.join('\n');
+        currentLineIndex = lyricsData.length > 2 ? 2 : 0; currentCharIndex = 0; selectedTarget = { lIdx: currentLineIndex, wIdx: -1 };
+        renderWorkspace(); 
+        exportBtn.disabled = false;
+    }
+
+    // 抽出共用的純文字 LRC 解析核心
+    function parseCoreLrcText(text) {
+        const lines = text.split(/\r?\n/); let tempArray = [];
+        lines.forEach(line => {
+            line = line.trim(); if (!line) return;
+            if (line.charCodeAt(0) === 0xFEFF) { line = line.substring(1); }
+            const lineTimeMatch = line.match(/^\[(\d+):(\d+(?:\.\d+)?)\](.*)$/);
+            if (lineTimeMatch) {
+                const min = parseInt(lineTimeMatch[1]); const sec = parseFloat(lineTimeMatch[2]); const lineTime = min * 60 + sec; let content = lineTimeMatch[3].trim();
+                let singerTag = null;
+                const singerMatch = content.match(/^\{(M|W|C)\}/i);
+                if (singerMatch) { singerTag = singerMatch[1].toUpperCase(); content = content.replace(/^\{(M|W|C)\}/i, "").trim(); }
+
+                if (/<(\d+):(\d+(?:\.\d+)?)>/.test(content)) {
+                    const tokens = []; const matches = [...content.matchAll(/<(\d+):(\d+(?:\.\d+)?)>/g)];
+                    let lineExplicitEndTime = null;
+                    for (let i = 0; i < matches.length; i++) {
+                        const currMatch = matches[i]; const currTime = parseInt(matches[i][1]) * 60 + parseFloat(matches[i][2]);
+                        const startIdx = currMatch.index + currMatch[0].length; const endIdx = (i + 1 < matches.length) ? matches[i+1].index : content.length;
+                        const tokenText = content.substring(startIdx, endIdx);
+                        if (i === matches.length - 1 && tokenText.trim() === "") {
+                            lineExplicitEndTime = parseFloat(currTime.toFixed(2));
+                        } else { tokens.push({ time: currTime, text: tokenText }); }
+                    }
+                    const words = [];
+                    tokens.forEach(t => {
+                        let txt = t.text; let pitchMatches = txt.match(/\([A-G]#?\d\)/gi) || []; let cleanText = txt.replace(/\([A-G]#?\d\)/gi, "");
+                        let isRest = (cleanText.trim() === "(R)" || txt.includes("(R)")); if (isRest) { cleanText = "(R)"; }
+                        if (cleanText === "" && pitchMatches.length === 0) return;
+                        words.push({ char: cleanText, rawPitch: pitchMatches.join(''), time: t.time, isSpace: /^[ \t\u3000]+$/.test(cleanText), isRest: isRest, isPitchOnly: (cleanText === "" && pitchMatches.length > 0) });
+                    });
+                    tempArray.push({ time: lineTime, endTime: lineExplicitEndTime, isWholeLine: false, isWaitingForEnd: false, isStarred: false, words: words, rawText: content.replace(/<[^>]+>/g, '').replace(/\([A-G]#?\d\)/gi, '').trim(), singerTag: singerTag });
+                } else {
+                    tempArray.push({ time: lineTime, endTime: null, isWholeLine: true, isWaitingForEnd: false, isStarred: false, words: tokenizeLine(content.trim()), rawText: content.trim(), singerTag: singerTag });
+                }
+            }
+        });
+        return tempArray;
+    }
 
     function parseAndLoadOpenLRCJson(jsonText) {
         try {
@@ -450,88 +573,6 @@
         } catch (err) { alert("解析 OpenLRC JSON 失敗: " + err.message); }
     }
 
-    function parseAndLoadLRC(text) {
-        try {
-            const lines = text.split(/\r?\n/); lyricsData = []; let rawTextLines = []; let hasTimestamps = false;
-            for (let i = 0; i < lines.length; i++) { if (/\[\d+:\d+(?:\.\d+)?\]/.test(lines[i])) { hasTimestamps = true; break; } }
-            
-            if (hasTimestamps) {
-                saveHistoryState();
-                lines.forEach(line => {
-                    line = line.trim(); if (!line) return; 
-                    if (line.charCodeAt(0) === 0xFEFF) { line = line.substring(1); } 
-                    
-                    const lineTimeMatch = line.match(/^\[(\d+):(\d+(?:\.\d+)?)\](.*)$/);
-                    if (lineTimeMatch) {
-                        const min = parseInt(lineTimeMatch[1]); const sec = parseFloat(lineTimeMatch[2]); const lineTime = min * 60 + sec; let content = lineTimeMatch[3].trim();
-                        
-                        let singerTag = null;
-                        const singerMatch = content.match(/^\{(M|W|C)\}/i);
-                        if (singerMatch) { singerTag = singerMatch[1].toUpperCase(); content = content.replace(/^\{(M|W|C)\}/i, "").trim(); }
-
-                        if (/<(\d+):(\d+(?:\.\d+)?)>/.test(content)) {
-                            const tokens = []; const matches = [...content.matchAll(/<(\d+):(\d+(?:\.\d+)?)>/g)];
-                            let lineExplicitEndTime = null;
-
-                            for (let i = 0; i < matches.length; i++) {
-                                const currMatch = matches[i]; const currTime = parseInt(matches[i][1]) * 60 + parseFloat(matches[i][2]);
-                                const startIdx = currMatch.index + currMatch[0].length; const endIdx = (i + 1 < matches.length) ? matches[i+1].index : content.length;
-                                const tokenText = content.substring(startIdx, endIdx);
-
-                                if (i === matches.length - 1 && tokenText.trim() === "") {
-                                    lineExplicitEndTime = parseFloat(currTime.toFixed(2));
-                                } else {
-                                    tokens.push({ time: currTime, text: tokenText });
-                                }
-                            }
-                            const words = [];
-                            tokens.forEach(t => {
-                                let txt = t.text; let pitchMatches = txt.match(/\([A-G]#?\d\)/gi) || []; let cleanText = txt.replace(/\([A-G]#?\d\)/gi, "");
-                                let isRest = (cleanText.trim() === "(R)" || txt.includes("(R)")); if (isRest) { cleanText = "(R)"; }
-                                if (cleanText === "" && pitchMatches.length === 0) return;
-                                
-                                words.push({ char: cleanText, rawPitch: pitchMatches.join(''), time: t.time, isSpace: /^[ \t\u3000]+$/.test(cleanText), isRest: isRest, isPitchOnly: (cleanText === "" && pitchMatches.length > 0), isEmptyTag: false });
-                            });
-                            const cleanRawText = content.replace(/<[^>]+>/g, '').replace(/\([A-G]#?\d\)/gi, '').trim(); rawTextLines.push(cleanRawText);
-                            lyricsData.push({ time: lineTime, endTime: lineExplicitEndTime, isWholeLine: false, isWaitingForEnd: false, isStarred: false, words: words, rawText: cleanRawText, singerTag: singerTag });
-                        } else {
-                            const cleanRawText = content.trim(); rawTextLines.push(cleanRawText);
-                            lyricsData.push({ time: lineTime, endTime: null, isWholeLine: true, isWaitingForEnd: false, isStarred: false, words: tokenizeLine(cleanRawText), rawText: cleanRawText, singerTag: singerTag });
-                        }
-                    }
-                });
-                if (lyricsData.length > 0) {
-                    lyricsInput.value = rawTextLines.join('\n'); currentLineIndex = lyricsData.length > 2 ? 2 : 0; currentCharIndex = 0; selectedTarget = { lIdx: currentLineIndex, wIdx: -1 };
-                    renderWorkspace(); exportBtn.disabled = false; alert(`成功將外部 LRC 檔案載入！`);
-                    return; 
-                } else { hasTimestamps = false; }
-            }
-
-            if (!hasTimestamps) {
-                const cleanLines = lines.map(l => l.trim()).filter(l => l);
-                if (cleanLines.length > 0) {
-                    saveHistoryState(); if (!cleanLines[0].includes('歌曲:') && !cleanLines[0].includes('歌名:')) { cleanLines.unshift('[00:05.00]歌手:請編輯'); cleanLines.unshift('[00:00.20]歌曲:請編輯'); }
-                    lyricsInput.value = cleanLines.map(l => l.replace(/^\[\d+:\d+(?:\.\d+)?\]/, '')).join('\n');
-                    lyricsData = cleanLines.map(line => {
-                        const lineTimeMatch = line.match(/^\[(\d+):(\d+(?:\.\d+)?)\](.*)$/);
-                        if(lineTimeMatch){ 
-                            let content = lineTimeMatch[3].trim(); let singerTag = null;
-                            const singerMatch = content.match(/^\{(M|W|C)\}/i);
-                            if (singerMatch) { singerTag = singerMatch[1].toUpperCase(); content = content.replace(/^\{(M|W|C)\}/i, "").trim(); }
-                            return { time: parseInt(lineTimeMatch[1]) * 60 + parseFloat(lineTimeMatch[2]), endTime: null, isWholeLine: true, isWaitingForEnd: false, isStarred: false, words: tokenizeLine(content), rawText: content, singerTag: singerTag }; 
-                        }
-                        let content = line; let singerTag = null;
-                        const singerMatch = content.match(/^\{(M|W|C)\}/i);
-                        if (singerMatch) { singerTag = singerMatch[1].toUpperCase(); content = content.replace(/^\{(M|W|C)\}/i, "").trim(); }
-                        return { time: null, endTime: null, isWholeLine: false, isWaitingForEnd: false, isStarred: false, words: tokenizeLine(content), rawText: content, singerTag: null };
-                    });
-                    currentLineIndex = lyricsData.length > 2 ? 2 : 0; currentCharIndex = 0; selectedTarget = { lIdx: currentLineIndex, wIdx: -1 };
-                    renderWorkspace(); exportBtn.disabled = false; alert(`💡 偵測到純文字或非標準格式！已初始化工作區！`);
-                }
-            }
-        } catch (err) { alert('載入檔案錯誤: ' + err.message); }
-    }
-
     function initializeLyricsIfEmpty() {
         if (lyricsData.length === 0) {
             saveHistoryState(); const textLines = lyricsInput.value.split('\n').map(l => l.trim()).filter(l => l);
@@ -539,24 +580,6 @@
             currentLineIndex = 0; currentCharIndex = 0; selectedTarget = { lIdx: 0, wIdx: -1 };
         }
     }
-
-    startBtn.addEventListener('click', () => {
-        try {
-            if (!audioPlayer.src) { alert('請先選擇 MP3 音檔！'); return; }
-            if (!lyricsInput.value.trim()) { alert('請先輸入歌詞！'); return; }
-            initializeLyricsIfEmpty(); renderWorkspace(); exportBtn.disabled = false; audioPlayer.play(); lyricsInput.blur();
-        } catch (err) { alert("啟動失敗: " + err.message); }
-    });
-
-    playbackCheckBtn.addEventListener('click', () => {
-        try {
-            if (!audioPlayer.src) { alert('請先選擇 MP3 音檔！'); return; }
-            if (!lyricsInput.value.trim()) { alert('請先輸入歌詞！'); return; }
-            initializeLyricsIfEmpty(); renderWorkspace(); exportBtn.disabled = false;
-            if (audioPlayer.paused) audioPlayer.play(); else audioPlayer.pause();
-            lyricsInput.blur();
-        } catch (err) { alert("檢查功能啟動失敗: " + err.message); }
-    });
 
     window.selectAndClearWord = function(lIdx, wIdx) {
         if (lyricsData.length === 0) return; disableAutoScrollUntil = Date.now() + 1500;
@@ -612,13 +635,13 @@
         let oldWords = oldLine.words.slice(0, wIdx); let newWords = oldLine.words.slice(wIdx);
         oldLine.words = oldWords; oldLine.rawText = oldWords.map(w => w.char).join('').trim();
         if (newWords.length > 0) newWords[0].time = split_time;
-        lyricsData.splice(lIdx + 1, 0, { time: split_time, endTime: null, isWholeLine: false, isWaitingForEnd: oldLine.isWaitingForEnd, isStarred: oldLine.isStarred, words: newWords, rawText: newWords.map(w => w.char).join('').trim(), singerTag: oldLine.singerTag });
+        lyricsData.splice(lIdx + 1, 0, { time: split_time, endTime: null, isWholeLine: false, isWaitingForEnd: oldLine.isWaitingForEnd, isStarred: oldLine.isStarred, words: newWords, rawText: newWords.map(w => w.char).join('').trim(), singerTag: oldLine.singerTag, track: oldLine.track });
         selectedTarget.lIdx = lIdx + 1; selectedTarget.wIdx = -1; renderWorkspace();
     };
 
     window.insertEmptyLineBelow = function(lIdx) {
         if (lIdx === null || !lyricsData[lIdx]) return;
-        saveHistoryState(); lyricsData.splice(lIdx + 1, 0, { time: getDynamicLineEndTime(lyricsData[lIdx], lIdx), endTime: null, isWholeLine: false, isWaitingForEnd: false, isStarred: false, words: [], rawText: "", isInlineEditing: true, singerTag: null });
+        saveHistoryState(); lyricsData.splice(lIdx + 1, 0, { time: getDynamicLineEndTime(lyricsData[lIdx], lIdx), endTime: null, isWholeLine: false, isWaitingForEnd: false, isStarred: false, words: [], rawText: "", isInlineEditing: true, singerTag: null, track: lyricsData[lIdx].track });
         currentLineIndex = lIdx + 1; currentCharIndex = 0; selectedTarget.lIdx = lIdx + 1; selectedTarget.wIdx = -1; renderWorkspace();
     };
 
@@ -649,12 +672,6 @@
                     if (currWord.time > dynamicEndTime || parseFloat((dynamicEndTime - currWord.time).toFixed(2)) < 0.02) { currWord.isQAError = true; errorCount++; }
                 }
             }
-            if (i + 1 < lyricsData.length && lyricsData[i + 1].time !== null && !lyricsData[i + 1].isInlineEditing) {
-                if (dynamicEndTime !== null && lyricsData[i + 1].time < dynamicEndTime) {
-                    let nextValid = lyricsData[i + 1].words.filter(w => !w.isSpace && !w.isPitchOnly); if (nextValid.length > 0) nextValid[0].isQAError = true;
-                    errorCount++;
-                }
-            }
         }
         renderWorkspace();
         if (errorCount > 0) alert(`⚠️ 時序安全性體檢攔截！共偵測到 ${errorCount} 處「實際時序逆流」（已高亮紅框）。`);
@@ -683,14 +700,12 @@
 
     function updateKTVPreview(curr) {
         if (lyricsData.length === 0) { document.getElementById('ktv-line-1').innerHTML = ""; document.getElementById('ktv-line-2').innerHTML = ""; return; }
-        
         let activeLineIdx = -1; let maxTime = -1;
         for (let i = 0; i < lyricsData.length; i++) {
             if (lyricsData[i].time !== null && curr >= lyricsData[i].time && lyricsData[i].time > maxTime) {
                 maxTime = lyricsData[i].time; activeLineIdx = i;
             }
         }
-        
         let currentDisplayIdx = (activeLineIdx !== -1) ? activeLineIdx : currentLineIndex;
         if (currentDisplayIdx >= lyricsData.length) currentDisplayIdx = lyricsData.length - 1;
         if (currentDisplayIdx < 0) currentDisplayIdx = 0;
@@ -708,7 +723,6 @@
         [line1Target, line2Target].forEach(lIdx => {
             if (lIdx < 0 || lIdx >= lyricsData.length) return;
             let lineItem = lyricsData[lIdx];
-            
             let fillCustomColor = "#00f0ff"; 
             if (lineItem.singerTag === 'M') fillCustomColor = "#00a2ff";      
             else if (lineItem.singerTag === 'W') fillCustomColor = "#ff3366"; 
@@ -733,17 +747,14 @@
                 if (word.isPitchOnly || word.isRest) return;
                 let fillSpan = document.querySelector(`#ktv-w-${lIdx}-${wIdx} .ktv-word-fill`); if (!fillSpan) return;
                 fillSpan.style.color = fillCustomColor; 
-                
                 if (word.time === null) { fillSpan.style.width = "0%"; return; }
                 let wordStartTime = word.time; let wordEndTime = null;
-                
                 for (let nextW = wIdx + 1; nextW < lineItem.words.length; nextW++) {
                     if (lineItem.words[nextW].time !== null && !lineItem.words[nextW].isPitchOnly) {
                         wordEndTime = lineItem.words[nextW].time; break;
                     }
                 }
                 if (wordEndTime === null) wordEndTime = getDynamicLineEndTime(lineItem, lIdx);
-                
                 if (wordEndTime === null || wordEndTime <= wordStartTime) {
                     fillSpan.style.width = (curr >= wordStartTime) ? "100%" : "0%";
                 } else {
@@ -789,6 +800,9 @@
     function renderWorkspace() {
         syncAllLineTimes(); 
         ktvRenderedLine1 = -1; ktvRenderedLine2 = -1; workspace.innerHTML = ''; if (lyricsData.length === 0) return;
+        
+        const isDualMode = document.getElementById('dualTrackMode').checked;
+
         lyricsData.forEach((lineItem, lIdx) => {
             const lineDiv = document.createElement('div'); lineDiv.id = `line-${lIdx}`;
             lineDiv.className = `lyric-line ${lIdx === currentLineIndex ? 'active' : ''} ${(selectedTarget.lIdx === lIdx && selectedTarget.wIdx === -1) ? 'selected-line' : ''}`;
@@ -808,6 +822,14 @@
             const starSpan = document.createElement('span'); starSpan.className = `star-btn ${lineItem.isStarred ? 'active' : ''}`; starSpan.innerHTML = lineItem.isStarred ? '★' : '☆';
             starSpan.onclick = (e) => { e.stopPropagation(); lineItem.isStarred = !lineItem.isStarred; renderWorkspace(); }; headerDiv.appendChild(starSpan);
             
+            // 🚀 雙軌模式專屬的軌道小徽章提示
+            if (isDualMode && lineItem.track) {
+                const trackBadge = document.createElement('span');
+                trackBadge.style.cssText = "background:#6c757d; color:white; padding:2px 5px; border-radius:4px; font-size:11px; margin-right:4px; font-weight:bold;";
+                trackBadge.innerText = `軌道${lineItem.track}`;
+                headerDiv.appendChild(trackBadge);
+            }
+
             if (lineItem.singerTag) {
                 const badge = document.createElement('span');
                 if (lineItem.singerTag === 'M') { badge.style.cssText = "background:#007bff; color:white; padding:2px 6px; border-radius:4px; font-size:12px; margin-right:5px; font-weight:bold;"; badge.innerText = "♂ 男"; } 
@@ -838,7 +860,6 @@
                 }
                 if (wordItem.isPitchOnly) return;
                 const wordSpan = document.createElement('span'); wordSpan.className = 'word-box'; wordSpan.id = `word-${lIdx}-${wIdx}`;
-                
                 if (wordItem.isSpace) { 
                     wordSpan.className += ' space-node'; wordSpan.innerHTML = '&nbsp;'; 
                 } else { 
@@ -918,7 +939,6 @@
         if (e.key === 'Enter') { e.preventDefault(); if (selectedTarget.wIdx === -1) insertEmptyLineBelow(selectedTarget.lIdx); else splitLineAtWord(selectedTarget.lIdx, selectedTarget.wIdx); return; }
         if (e.code === 'KeyA') { e.preventDefault(); if (audioPlayer.src) { if (audioPlayer.paused) audioPlayer.play(); else audioPlayer.pause(); } return; }
         
-        // 🚀【蓋印標記】：加入 isUserModified = true，代表這是本次打點新產生的時間
         if (e.code === 'Digit0' || e.code === 'Numpad0' || e.code === 'KeyR') {
             e.preventDefault(); if (currentLineIndex >= lyricsData.length) return; let currentLine = lyricsData[currentLineIndex];
             saveHistoryState(); 
@@ -945,7 +965,6 @@
             renderWorkspace(); return;
         }
 
-        // 🚀【蓋印標記】：加入 isUserModified = true，代表這是本次打點新產生的時間
         if (e.code === 'Space') {
             e.preventDefault(); if (currentLineIndex >= lyricsData.length) return; let currentLine = lyricsData[currentLineIndex];
             saveHistoryState(); 
@@ -971,7 +990,6 @@
             renderWorkspace(); return;
         }
 
-        // 🚀【核心修正】：智慧無損退回鎖。現在只有當字詞帶有 isUserModified 時才會洗掉時間；如果是原本導入的完好時間則絕對不刪除！
         if (e.code === 'Backspace') {
             e.preventDefault(); let timeToRewind = null; saveHistoryState(); 
             if (currentLineIndex >= lyricsData.length) {
@@ -1016,8 +1034,13 @@
     const track = document.getElementById('timelineTrack');
     if (track) { track.addEventListener('click', (e) => { if (!audioPlayer.duration || isNaN(audioPlayer.duration)) return; const rect = track.getBoundingClientRect(); audioPlayer.currentTime = ((e.clientX - rect.left) / rect.width) * audioPlayer.duration; disableAutoScrollUntil = Date.now() + 1000; }); }
 
+    // 🚀【獨立雙行無損導出】：完美按照時間排序、各自被打上合唱與逐字標籤
     exportBtn.addEventListener('click', () => {
         syncAllLineTimes(); 
+        
+        // 導出前做最終全域時間軸排序，確保導出檔案絕不產生時序錯亂
+        lyricsData.sort((a, b) => (a.time ?? Infinity) - (b.time ?? Infinity));
+        
         let lrcContent = "";
         lyricsData.forEach((line, index) => {
             if (line.time === null) return; const lineTimeStr = formatTime(line.time);
@@ -1042,7 +1065,7 @@
             }
         });
         const blob = new Blob([lrcContent], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a');
-        a.href = url; a.download = "output_master_edition.lrc"; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        a.href = url; a.download = "output_dual_track_master.lrc"; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     });
 </script>
 </body>
